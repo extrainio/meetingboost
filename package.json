@@ -16,7 +16,8 @@
     "dist:dmg": "tsc && electron-builder --mac dmg",
     "dist:dir": "tsc && electron-builder --mac dir",
     "test": "python3 -m pytest tests/test_sounds.py -v",
-    "test:e2e": "tsc && npx playwright test"
+    "test:e2e": "tsc && npx playwright test tests/e2e/pack-selection.spec.ts",
+    "screenshots": "tsc && npx playwright test tests/e2e/screenshots.spec.ts"
   },
   "build": {
     "appId": "com.meetingboost.app",

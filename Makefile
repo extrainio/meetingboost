@@ -12,7 +12,7 @@ AMBER  := \033[33m
 GREEN  := \033[32m
 DIM    := \033[2m
 
-.PHONY: help install build dev app dmg dmg-universal dist icon icon-from-svg clean test sounds example-pack
+.PHONY: help install build dev app dmg dmg-universal dist icon icon-from-svg clean test sounds example-pack screenshots
 
 # ── Help ────────────────────────────────────────────────────────────────
 help:
@@ -36,7 +36,11 @@ test: ## Run unit test suite (sounds integrity + TypeScript)
 	python3 -m pytest tests/test_sounds.py -v
 
 test-e2e: build ## Run Playwright E2E tests against the Electron app
-	npx playwright test
+	npx playwright test tests/e2e/pack-selection.spec.ts
+
+screenshots: build ## Capture README screenshots from a real Electron run → assets/screenshots/
+	npx playwright test tests/e2e/screenshots.spec.ts
+	@printf "$(GREEN)Screenshots:$(RESET) assets/screenshots/\n"
 
 sounds: ## Download all sound packs (Pixabay + YouTube)
 	python3 scripts/download_sounds.py

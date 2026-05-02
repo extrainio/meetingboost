@@ -29,6 +29,7 @@
 
 <p align="center">
   <a href="#quick-start">Quick start</a> ·
+  <a href="#showcase">Showcase</a> ·
   <a href="#features">Features</a> ·
   <a href="#mbpack-format">.mbpack format</a> ·
   <a href="#development">Development</a> ·
@@ -36,6 +37,41 @@
   <a href="CONTRIBUTING.md">Contributing</a> ·
   <a href="SHIPPING.md">Roadmap</a>
 </p>
+
+---
+
+## Showcase
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/screenshots/board-default.png" alt="The board — 26 keys, one Classics pack, ready to fire" />
+      <br /><sub><strong>The board</strong> — always-on-top, 520×580, your keyboard is the trigger surface.</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/screenshots/board-lit.png" alt="Two keys lit in amber after firing a sound" />
+      <br /><sub><strong>Lit state</strong> — amber glow on press, keycap collapses 3px like a real key.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="assets/screenshots/packs.png" alt="Pack browser with Classics selected" />
+      <br /><sub><strong>Packs</strong> — 3 official packs, plus your custom + community packs.</sub>
+    </td>
+    <td align="center">
+      <img src="assets/screenshots/sound-manager.png" alt="Add Sound — YouTube clipper with waveform scrubber" />
+      <br /><sub><strong>Add Sound</strong> — YouTube clip → key, voice record, or import.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
+      <img src="assets/screenshots/settings.png" alt="Settings — Audio panel with virtual output device picker" width="60%" />
+      <br /><sub><strong>Settings</strong> — virtual output, monitor device, theme, keyboard, window opacity.</sub>
+    </td>
+  </tr>
+</table>
+
+> Regenerate these from your local build: `make screenshots`.
 
 ---
 

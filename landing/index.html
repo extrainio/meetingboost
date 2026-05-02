@@ -1,0 +1,1489 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>MeetingBoost · Press Q for rimshot. Win the call.</title>
+<meta name="description" content="A keyboard-driven soundboard for macOS meetings. 26 keys. 3 sound packs. Routes through BlackHole into Zoom, Teams, or Meet. Keypress, not six clicks." />
+<meta name="theme-color" content="#0d0a08" />
+<meta property="og:title" content="MeetingBoost · A keyboard-driven soundboard for macOS meetings" />
+<meta property="og:description" content="One keypress. One sound. Straight into the meeting. No menus, no dragging, no clicking." />
+<meta property="og:type" content="website" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+/* ──────────────────────────────────────────────────────────────────────────
+   Tokens — mirror the in-app v6 system. Single source: PRODUCT.md "Operator,
+   Direct, Precise". Restrained palette, amber the only load-bearing color.
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+  --bg:        oklch(7.5% 0.006 75);
+  --s1:        oklch(10.5% 0.007 75);
+  --s2:        oklch(13.5% 0.008 75);
+  --s3:        oklch(18% 0.009 75);
+  --s4:        oklch(22% 0.010 75);
+
+  --hairline:  oklch(100% 0 0 / 5.5%);
+  --hairline-2:oklch(100% 0 0 / 11%);
+
+  --text:      oklch(88% 0.007 78);
+  --text-2:    oklch(70% 0.008 78);
+  --muted:     oklch(46% 0.007 76);
+  --faint:     oklch(30% 0.006 76);
+
+  --amber:     oklch(67% 0.17 72);
+  --amber-2:   oklch(78% 0.16 78);
+  --amber-deep:oklch(53% 0.16 65);
+  --amber-glow:oklch(67% 0.17 72 / 32%);
+  --amber-bg:  oklch(67% 0.17 72 / 12%);
+
+  --red:       oklch(58% 0.18 27);
+  --green:     oklch(70% 0.15 145);
+
+  --mono:      "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --display:   "Barlow Condensed", "Helvetica Neue", system-ui, sans-serif;
+
+  --r-1:  6px;
+  --r-2:  10px;
+  --r-3:  16px;
+
+  /* fluid type — clamp() so headings breathe between 360px and 2560px */
+  --t-display: clamp(3.4rem, 9vw + 1rem, 11rem);
+  --t-h1:      clamp(2.2rem, 4.5vw + .5rem, 4.4rem);
+  --t-h2:      clamp(1.6rem, 2.8vw + .4rem, 2.6rem);
+  --t-h3:      clamp(1.15rem, 1.4vw + .4rem, 1.5rem);
+  --t-body:    clamp(1rem, .25vw + .9rem, 1.06rem);
+  --t-small:   clamp(.78rem, .1vw + .76rem, .84rem);
+  --t-eyebrow: clamp(.7rem, .1vw + .68rem, .76rem);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+html {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 16px;
+  font-feature-settings: "ss01", "ss02", "ss03", "calt", "liga";
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-size: var(--t-body);
+  line-height: 1.55;
+  background:
+    /* faint vignette so the corners don't read flat under the hero */
+    radial-gradient(120% 70% at 50% 0%, oklch(13% 0.012 75 / 60%), transparent 70%),
+    radial-gradient(80% 50% at 90% 110%, oklch(13% 0.012 65 / 35%), transparent 65%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+::selection { background: var(--amber); color: var(--bg); }
+
+/* Reduced-motion respect — PRODUCT.md a11y principle */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Top status bar — operator-console motif. Always-on. The first thing the
+   visitor sees telegraphs the brand stance.
+   ────────────────────────────────────────────────────────────────────────── */
+.statusbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 22px;
+  font-size: var(--t-small);
+  color: var(--text-2);
+  background: oklch(7% 0.006 75 / 88%);
+  backdrop-filter: blur(10px) saturate(140%);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.statusbar .logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--text);
+}
+.logo .dot {
+  width: 7px; height: 7px; border-radius: 999px;
+  background: var(--amber);
+  box-shadow: 0 0 10px var(--amber-glow);
+  animation: pulse 2.4s cubic-bezier(.4, 0, .2, 1) infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .35; }
+}
+
+.statusbar nav { margin-left: auto; display: flex; gap: 18px; }
+.statusbar a {
+  color: var(--text-2);
+  text-decoration: none;
+  letter-spacing: .04em;
+  transition: color 160ms cubic-bezier(.22,1,.36,1);
+}
+.statusbar a:hover { color: var(--amber); }
+
+.statusbar .live-readout {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .04em;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   HERO — drenched-amber moment. Oversize Q in Barlow Condensed 900 sits
+   beside the keyboard band. The supporting alphabet is a faded stage.
+   ────────────────────────────────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  padding: clamp(60px, 9vw, 130px) clamp(20px, 5vw, 80px) clamp(40px, 6vw, 80px);
+  overflow: hidden;
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: clamp(24px, 4vw, 64px);
+  align-items: end;
+  max-width: 1480px;
+  margin: 0 auto;
+}
+
+@media (max-width: 900px) {
+  .hero-grid { grid-template-columns: 1fr; align-items: start; }
+}
+
+.hero-eyebrow {
+  font-size: var(--t-eyebrow);
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin: 0 0 18px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.hero-eyebrow::before {
+  content: "";
+  width: 28px; height: 1px; background: var(--amber);
+  display: inline-block;
+}
+
+.hero h1 {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: var(--t-display);
+  line-height: .82;
+  letter-spacing: -.025em;
+  margin: 0;
+  color: var(--text);
+  text-transform: uppercase;
+  font-feature-settings: "ss01";
+}
+.hero h1 .lead {
+  display: block;
+  color: var(--amber);
+  /* slight downward shift so PRESS sits flush against the Q row beneath */
+  margin-bottom: -.04em;
+}
+.hero h1 .body {
+  display: block;
+  font-size: clamp(2.2rem, 5vw + .4rem, 5.6rem);
+  color: var(--text);
+}
+.hero h1 .accent { color: var(--amber); }
+
+.hero p.deck {
+  font-family: var(--mono);
+  font-size: clamp(.96rem, .35vw + .9rem, 1.2rem);
+  line-height: 1.6;
+  color: var(--text-2);
+  max-width: 56ch;
+  margin: 28px 0 0;
+  font-weight: 400;
+}
+
+.hero-cta {
+  margin-top: 38px;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  font-family: var(--mono);
+  font-size: .92rem;
+  font-weight: 600;
+  letter-spacing: .03em;
+  padding: 13px 22px;
+  border-radius: var(--r-1);
+  border: 1px solid var(--hairline-2);
+  background: var(--s2);
+  color: var(--text);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: transform 200ms cubic-bezier(.22,1,.36,1),
+              border-color 200ms cubic-bezier(.22,1,.36,1),
+              box-shadow 200ms cubic-bezier(.22,1,.36,1),
+              color 200ms cubic-bezier(.22,1,.36,1);
+}
+.btn .arrow { transition: transform 200ms cubic-bezier(.22,1,.36,1); }
+.btn:hover  { border-color: var(--hairline-2); color: var(--amber); transform: translateY(-1px); }
+.btn:hover .arrow { transform: translateX(3px); }
+
+.btn.primary {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--bg);
+  box-shadow: 0 0 0 0 var(--amber-glow);
+}
+.btn.primary:hover {
+  color: var(--bg);
+  background: var(--amber-2);
+  border-color: var(--amber-2);
+  box-shadow: 0 4px 24px var(--amber-glow), 0 0 0 1px var(--amber);
+}
+
+/* The right column: a keyboard-band visual with one Q lit.
+   Pure CSS, no images — voice through structure, like a real spec sheet. */
+.hero-keyboard {
+  display: grid;
+  gap: 10px;
+  padding: 22px;
+  background: var(--s1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-3);
+  box-shadow:
+    inset 0 1px 0 oklch(100% 0 0 / 4%),
+    0 18px 60px -20px oklch(0% 0 0 / 50%);
+}
+.kbd-row { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; }
+.kbd-row.r2 { grid-template-columns: .5fr repeat(9, 1fr); }
+.kbd-row.r3 { grid-template-columns: .8fr repeat(7, 1fr) 1fr; }
+
+.kbd-key {
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(.95rem, 1.4vw, 1.4rem);
+  text-align: center;
+  padding: 14px 6px 10px;
+  border-radius: var(--r-1);
+  background: var(--s2);
+  border: 1px solid var(--hairline);
+  border-bottom: 3px solid var(--hairline-2);
+  color: var(--text-2);
+  letter-spacing: .04em;
+  user-select: none;
+  position: relative;
+  transition:
+    background 180ms cubic-bezier(.22,1,.36,1),
+    color 180ms cubic-bezier(.22,1,.36,1),
+    border-color 180ms cubic-bezier(.22,1,.36,1),
+    transform 90ms cubic-bezier(.4,0,1,1);
+}
+.kbd-key.lit {
+  color: var(--amber);
+  background: var(--amber-bg);
+  border-color: var(--amber);
+  box-shadow: 0 0 0 1px var(--amber), 0 0 18px var(--amber-glow);
+}
+.kbd-key.wide  { padding: 14px 16px 10px; }
+.kbd-key.tab   { font-size: .78rem; font-family: var(--mono); font-weight: 600; }
+.kbd-key.shift { font-size: .78rem; font-family: var(--mono); font-weight: 600; }
+.kbd-key.space { grid-column: span 6; font-size: .7rem; font-family: var(--mono); color: var(--muted); }
+
+.kbd-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--t-small);
+  color: var(--muted);
+  letter-spacing: .04em;
+  padding-top: 6px;
+  border-top: 1px solid var(--hairline);
+  margin-top: 6px;
+}
+
+.kbd-foot .live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
+}
+.kbd-foot .live .dot {
+  width: 6px; height: 6px; border-radius: 999px;
+  background: var(--amber);
+  box-shadow: 0 0 8px var(--amber-glow);
+}
+
+/* a tiny scanline texture over the hero — broadcast control room cue, not glass */
+.hero::after {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg,
+      oklch(100% 0 0 / 0%) 0,
+      oklch(100% 0 0 / 0%) 2px,
+      oklch(100% 0 0 / 1.5%) 2px,
+      oklch(100% 0 0 / 1.5%) 3px);
+  mix-blend-mode: screen;
+  opacity: .35;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Section frame — every section gets the same mono-eyebrow + faint hairline
+   above so the layout reads as a spec doc, not a marketing brochure.
+   ────────────────────────────────────────────────────────────────────────── */
+section { position: relative; padding: clamp(60px, 7vw, 110px) clamp(20px, 5vw, 80px); }
+.section-inner { max-width: 1280px; margin: 0 auto; }
+
+.section-eyebrow {
+  font-size: var(--t-eyebrow);
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin: 0 0 26px;
+}
+.section-eyebrow .num {
+  color: var(--amber);
+  font-variant-numeric: tabular-nums;
+}
+.section-eyebrow .rule {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--hairline-2), transparent 100%);
+}
+
+h2 {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: var(--t-h1);
+  line-height: 1.1;
+  letter-spacing: -.015em;
+  margin: 0 0 22px;
+  color: var(--text);
+  max-width: 22ch;
+}
+
+h3 {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: var(--t-h3);
+  letter-spacing: -.005em;
+  color: var(--text);
+  margin: 0 0 10px;
+}
+
+p { color: var(--text-2); max-width: 65ch; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   The pitch row — three short claims, bench-style. Not metric cards: short
+   prose with a leading numeric ID so the eye reads them as spec rows.
+   ────────────────────────────────────────────────────────────────────────── */
+.bench {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  margin-top: 60px;
+}
+@media (max-width: 760px) { .bench { grid-template-columns: 1fr; } }
+
+.bench-row {
+  padding: clamp(20px, 2.6vw, 36px);
+  position: relative;
+}
+.bench-row + .bench-row { border-left: 1px solid var(--hairline); }
+@media (max-width: 760px) {
+  .bench-row + .bench-row { border-left: 0; border-top: 1px solid var(--hairline); }
+}
+.bench-row .id {
+  font-size: var(--t-eyebrow);
+  letter-spacing: .26em;
+  color: var(--amber);
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.bench-row h4 {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin: 0 0 8px;
+  color: var(--text);
+}
+.bench-row p { font-size: .96rem; color: var(--text-2); margin: 0; max-width: none; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   How-it-routes — diagram-style flow. Two columns of short prose flank a
+   center column of file-paths and command names. Reads as system documentation.
+   ────────────────────────────────────────────────────────────────────────── */
+.routes {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1.4fr);
+  gap: clamp(20px, 4vw, 56px);
+  align-items: center;
+  margin-top: 42px;
+}
+@media (max-width: 920px) {
+  .routes { grid-template-columns: 1fr; gap: 22px; }
+  .routes .arrow-col { display: none; }
+}
+
+.route-card {
+  border: 1px solid var(--hairline);
+  background: var(--s1);
+  padding: 26px;
+  border-radius: var(--r-3);
+}
+.route-card .label {
+  font-size: var(--t-eyebrow);
+  letter-spacing: .26em;
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.route-card h4 {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 1.2rem;
+  margin: 0 0 12px;
+  color: var(--text);
+}
+.route-card p { margin: 0; color: var(--text-2); font-size: .96rem; }
+.route-card.input  { border-color: var(--hairline-2); }
+.route-card.output { border-color: var(--amber); background: linear-gradient(180deg, var(--s2), var(--s1)); }
+.route-card.output .label { color: var(--amber); }
+
+.arrow-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--t-small);
+  color: var(--muted);
+  letter-spacing: .12em;
+}
+.arrow-line {
+  width: 2px; height: 90px;
+  background: linear-gradient(180deg, var(--hairline-2), var(--amber));
+  border-radius: 2px;
+  position: relative;
+}
+.arrow-line::after {
+  content: "▼";
+  color: var(--amber);
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: .7rem;
+}
+@media (min-width: 921px) {
+  .arrow-line { width: 90px; height: 2px; background: linear-gradient(90deg, var(--hairline-2), var(--amber)); }
+  .arrow-line::after { content: "▶"; bottom: 50%; left: auto; right: -10px; top: 50%; transform: translateY(-50%); }
+}
+.arrow-col code {
+  font-family: var(--mono);
+  font-size: .72rem;
+  color: var(--text-2);
+  background: var(--s2);
+  border: 1px solid var(--hairline);
+  padding: 4px 8px;
+  border-radius: var(--r-1);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Showcase — five real product screenshots laid in an asymmetric strip.
+   First two are tall and prominent; the rest sit underneath in a 3-up.
+   ────────────────────────────────────────────────────────────────────────── */
+.showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: clamp(14px, 2vw, 24px);
+  margin-top: 42px;
+}
+.shot {
+  position: relative;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-3);
+  overflow: hidden;
+  background: var(--s1);
+  transition: border-color 200ms cubic-bezier(.22,1,.36,1),
+              transform 200ms cubic-bezier(.22,1,.36,1);
+}
+.shot:hover { border-color: var(--hairline-2); transform: translateY(-2px); }
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--bg);
+}
+.shot .cap {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--hairline);
+  font-size: var(--t-eyebrow);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--s2);
+}
+.shot .cap strong { color: var(--text); font-weight: 600; }
+.shot .cap .num   { color: var(--amber); font-variant-numeric: tabular-nums; }
+
+.shot.span-7 { grid-column: span 7; }
+.shot.span-5 { grid-column: span 5; }
+.shot.span-4 { grid-column: span 4; }
+.shot.span-12 { grid-column: span 12; }
+
+@media (max-width: 880px) {
+  .shot.span-7, .shot.span-5, .shot.span-4 { grid-column: span 12; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Pack lineup — three packs as long rows, NOT a card grid. Each row carries
+   a vertical key:label list (typewriter feel) and a tagline. Asymmetric
+   for rhythm; first row pulls right, others pull left.
+   ────────────────────────────────────────────────────────────────────────── */
+.pack-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: clamp(20px, 4vw, 60px);
+  padding: clamp(34px, 5vw, 64px) 0;
+  border-top: 1px solid var(--hairline);
+  align-items: start;
+}
+.pack-row:last-child { border-bottom: 1px solid var(--hairline); }
+
+@media (max-width: 820px) {
+  .pack-row { grid-template-columns: 1fr; }
+}
+
+.pack-row .meta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pack-id {
+  font-size: var(--t-eyebrow);
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  color: var(--amber);
+  font-weight: 600;
+}
+.pack-row h3 {
+  font-family: var(--display);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: clamp(2rem, 3.6vw, 3.4rem);
+  letter-spacing: -.01em;
+  line-height: .96;
+  color: var(--text);
+  margin: 4px 0 12px;
+}
+.pack-tag {
+  font-size: 1rem;
+  color: var(--text-2);
+  max-width: 38ch;
+  margin: 0;
+}
+.pack-count {
+  font-size: var(--t-small);
+  color: var(--muted);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+
+.pack-keys {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px 22px;
+  font-family: var(--mono);
+  font-size: .92rem;
+  align-content: start;
+}
+.pack-key {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--hairline);
+  color: var(--text-2);
+}
+.pack-key .key {
+  font-family: var(--display);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 1.1rem;
+  color: var(--amber);
+  text-align: center;
+  letter-spacing: 0;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Three input routes — record / youtube / mbpack. Vertical cards but with a
+   running prose line, not stacked icon-title-text templates.
+   ────────────────────────────────────────────────────────────────────────── */
+.routes-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(14px, 2vw, 24px);
+  margin-top: 36px;
+}
+@media (max-width: 880px) { .routes-3 { grid-template-columns: 1fr; } }
+
+.route3 {
+  background: var(--s1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-3);
+  padding: 28px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 280px;
+}
+.route3 .num {
+  font-size: var(--t-eyebrow);
+  letter-spacing: .26em;
+  color: var(--amber);
+  font-weight: 600;
+}
+.route3 h4 {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 1.2rem;
+  margin: 0;
+  color: var(--text);
+}
+.route3 p { color: var(--text-2); font-size: .94rem; margin: 0; max-width: none; }
+.route3 .glyph {
+  margin-top: auto;
+  height: 56px;
+  border-radius: var(--r-2);
+  background: var(--s2);
+  border: 1px solid var(--hairline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: .82rem;
+  color: var(--muted);
+  letter-spacing: .08em;
+  position: relative;
+  overflow: hidden;
+}
+.route3 .glyph .bar {
+  position: absolute;
+  top: 50%;
+  width: 3px;
+  background: var(--amber);
+  border-radius: 1px;
+  transform-origin: bottom;
+}
+
+/* Mic input — a tiny live-meter glyph */
+.glyph-mic {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 22px;
+  justify-content: flex-start;
+}
+.glyph-mic .mic-bar {
+  width: 3px;
+  background: var(--amber);
+  border-radius: 1px;
+  animation: meter 1.4s cubic-bezier(.4,0,.6,1) infinite alternate;
+}
+.glyph-mic .mic-bar:nth-child(1) { height: 12px; animation-delay: 0s; }
+.glyph-mic .mic-bar:nth-child(2) { height: 24px; animation-delay: .12s; }
+.glyph-mic .mic-bar:nth-child(3) { height: 38px; animation-delay: .24s; }
+.glyph-mic .mic-bar:nth-child(4) { height: 30px; animation-delay: .36s; }
+.glyph-mic .mic-bar:nth-child(5) { height: 18px; animation-delay: .48s; }
+.glyph-mic .mic-bar:nth-child(6) { height: 26px; animation-delay: .6s; }
+.glyph-mic .mic-bar:nth-child(7) { height: 14px; animation-delay: .72s; }
+.glyph-mic .label-tail {
+  margin-left: auto;
+  font-size: .76rem;
+  color: var(--muted);
+  letter-spacing: .14em;
+}
+@keyframes meter {
+  0%   { transform: scaleY(.4); opacity: .55; }
+  100% { transform: scaleY(1);  opacity: 1; }
+}
+
+/* YouTube glyph — waveform + amber playhead */
+.glyph-yt {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 18px;
+  justify-content: flex-start;
+}
+.glyph-yt .wave {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+.glyph-yt .wave i {
+  display: block;
+  width: 2px;
+  background: var(--text-2);
+  border-radius: 1px;
+}
+.glyph-yt .wave i.in   { background: var(--amber); }
+.glyph-yt .label-tail {
+  margin-left: 14px;
+  font-size: .76rem;
+  color: var(--muted);
+  letter-spacing: .14em;
+}
+
+/* mbpack glyph — file tree */
+.glyph-mb {
+  font-family: var(--mono);
+  display: block;
+  padding: 10px 18px;
+  text-align: left;
+  font-size: .76rem;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.glyph-mb .dim { color: var(--muted); }
+.glyph-mb .am  { color: var(--amber); }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   The mbpack manifest — code block with subtle row dividers. Distinct from
+   the install block: this is documentation of the file format, not commands.
+   ────────────────────────────────────────────────────────────────────────── */
+.format-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: clamp(20px, 4vw, 56px);
+  margin-top: 36px;
+  align-items: start;
+}
+@media (max-width: 920px) { .format-grid { grid-template-columns: 1fr; } }
+
+.format-prose p { margin: 0 0 14px; }
+
+.code-block {
+  font-family: var(--mono);
+  font-size: .86rem;
+  line-height: 1.7;
+  background: var(--s1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-3);
+  padding: 0;
+  overflow: hidden;
+  color: var(--text-2);
+}
+.code-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--s2);
+  border-bottom: 1px solid var(--hairline);
+  font-size: var(--t-eyebrow);
+  letter-spacing: .22em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.code-head .dot-row { display: inline-flex; gap: 6px; }
+.code-head .dot-row span {
+  display: inline-block;
+  width: 8px; height: 8px; border-radius: 999px;
+  background: var(--s4);
+}
+.code-head .dot-row span.am { background: var(--amber); }
+.code-body {
+  padding: 18px 22px;
+  white-space: pre;
+  overflow-x: auto;
+}
+.code-body .k  { color: var(--amber-2); }
+.code-body .s  { color: var(--text); }
+.code-body .c  { color: var(--muted); font-style: italic; }
+.code-body .am { color: var(--amber); }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Install — terminal-shaped block with a copy button per command.
+   ────────────────────────────────────────────────────────────────────────── */
+.install-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(20px, 4vw, 48px);
+  margin-top: 36px;
+}
+@media (max-width: 920px) { .install-grid { grid-template-columns: 1fr; } }
+
+.terminal {
+  background: var(--s1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-3);
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: .9rem;
+  line-height: 1.7;
+}
+.terminal-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  background: var(--s2);
+  border-bottom: 1px solid var(--hairline);
+  color: var(--muted);
+  font-size: var(--t-eyebrow);
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+.terminal-head .ctrl {
+  display: flex; gap: 5px;
+}
+.terminal-head .ctrl span {
+  width: 9px; height: 9px; border-radius: 999px;
+  background: var(--s4);
+}
+.terminal-head .ctrl span.am { background: var(--amber); }
+.terminal-head .title { margin-left: auto; color: var(--text-2); letter-spacing: .14em; }
+
+.terminal-body { padding: 18px 22px 22px; }
+.cmd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+.cmd + .cmd { border-top: 1px dashed var(--hairline); }
+.cmd .prompt { color: var(--amber); user-select: none; }
+.cmd code { color: var(--text); flex: 1; font-family: inherit; }
+.cmd .copy {
+  background: transparent;
+  border: 1px solid var(--hairline);
+  color: var(--muted);
+  padding: 4px 10px;
+  border-radius: var(--r-1);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: .72rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  transition: color 160ms, border-color 160ms;
+}
+.cmd .copy:hover  { color: var(--amber); border-color: var(--amber); }
+.cmd .copy.copied { color: var(--green); border-color: var(--green); }
+
+.requirements {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.requirements .req {
+  display: grid;
+  grid-template-columns: 110px 1fr auto;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--hairline);
+  align-items: baseline;
+}
+.requirements .req:last-child { border-bottom: 0; }
+.requirements .req strong {
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: .04em;
+}
+.requirements .req .why {
+  color: var(--text-2);
+  font-size: .92rem;
+}
+.requirements .req .ver {
+  font-size: var(--t-small);
+  color: var(--amber);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .08em;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   FAQ — terminal-style q/a. Tight, scannable, no accordions.
+   ────────────────────────────────────────────────────────────────────────── */
+.faq {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 clamp(28px, 5vw, 64px);
+  margin-top: 32px;
+}
+@media (max-width: 820px) { .faq { grid-template-columns: 1fr; } }
+
+.qa { padding: 22px 0; border-top: 1px solid var(--hairline); }
+.qa h4 {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+.qa h4::before {
+  content: "Q ";
+  color: var(--amber);
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+.qa p {
+  font-size: .94rem;
+  color: var(--text-2);
+  margin: 0;
+  max-width: 56ch;
+}
+.qa p::before {
+  content: "A ";
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Final-call strip — bigger amber moment, brings the user back to Download.
+   ────────────────────────────────────────────────────────────────────────── */
+.final-call {
+  border-top: 1px solid var(--amber);
+  background:
+    radial-gradient(60% 100% at 50% 100%, var(--amber-bg), transparent 70%),
+    var(--bg);
+  padding: clamp(80px, 10vw, 140px) clamp(20px, 5vw, 80px);
+  text-align: center;
+}
+.final-call h2 {
+  font-family: var(--display);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: clamp(2.4rem, 6vw, 5.5rem);
+  line-height: .98;
+  letter-spacing: -.02em;
+  margin: 0 auto 22px;
+  max-width: 18ch;
+  color: var(--text);
+}
+.final-call h2 .am { color: var(--amber); }
+.final-call p {
+  margin: 0 auto 32px;
+  color: var(--text-2);
+  max-width: 52ch;
+  font-size: 1rem;
+}
+.final-call .hero-cta { justify-content: center; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Footer — sub-status bar, opposite mirror of the top.
+   ────────────────────────────────────────────────────────────────────────── */
+footer {
+  border-top: 1px solid var(--hairline);
+  padding: 22px clamp(20px, 5vw, 80px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: var(--t-small);
+  color: var(--muted);
+  letter-spacing: .04em;
+}
+footer nav { display: flex; gap: 18px; margin-left: auto; }
+footer a { color: var(--text-2); text-decoration: none; }
+footer a:hover { color: var(--amber); }
+footer .sig { color: var(--text-2); }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Reveal on scroll — single, restrained pass. Honors reduced-motion.
+   ────────────────────────────────────────────────────────────────────────── */
+.reveal { opacity: 0; transform: translateY(14px); transition: opacity 700ms cubic-bezier(.22,1,.36,1), transform 700ms cubic-bezier(.22,1,.36,1); }
+.reveal.in { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ──────────────────────────────────────────────────────────────────────
+     Status bar
+     ────────────────────────────────────────────────────────────────────── -->
+<div class="statusbar" role="banner">
+  <span class="logo"><span class="dot" aria-hidden="true"></span> MeetingBoost</span>
+  <span class="live-readout" aria-hidden="true">v1.0.0-beta · macOS 13+</span>
+  <nav aria-label="Primary">
+    <a href="#showcase">Showcase</a>
+    <a href="#packs">Packs</a>
+    <a href="#install">Install</a>
+    <a href="https://github.com/extrain-pascal/meetingboost">GitHub</a>
+  </nav>
+</div>
+
+<!-- ──────────────────────────────────────────────────────────────────────
+     HERO
+     ────────────────────────────────────────────────────────────────────── -->
+<header class="hero">
+  <div class="hero-grid">
+    <div>
+      <p class="hero-eyebrow">Soundboard for macOS meetings</p>
+      <h1>
+        <span class="lead">Press Q</span>
+        <span class="body">for <span class="accent">rimshot.</span></span>
+        <span class="body">Win the call.</span>
+      </h1>
+      <p class="deck">
+        A 520×580 window that turns your keyboard into a soundboard. Each letter is a sound, each sound routes through BlackHole into Zoom, Teams, or Meet. One keypress. No menus. No alt-tab.
+      </p>
+      <div class="hero-cta">
+        <a class="btn primary" href="https://github.com/extrain-pascal/meetingboost/releases/latest">
+          Download for macOS <span class="arrow">↓</span>
+        </a>
+        <a class="btn" href="https://github.com/extrain-pascal/meetingboost">
+          View source <span class="arrow">→</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Right column: a keyboard with Q lit. CSS-only, mirrors the in-app tile. -->
+    <div class="hero-keyboard" aria-hidden="true">
+      <div class="kbd-row r1">
+        <div class="kbd-key tab">Tab</div>
+        <div class="kbd-key lit">Q</div>
+        <div class="kbd-key">W</div>
+        <div class="kbd-key">E</div>
+        <div class="kbd-key">R</div>
+        <div class="kbd-key">T</div>
+        <div class="kbd-key">Y</div>
+        <div class="kbd-key">U</div>
+        <div class="kbd-key">I</div>
+        <div class="kbd-key">O</div>
+      </div>
+      <div class="kbd-row r2">
+        <div class="kbd-key shift">⇪</div>
+        <div class="kbd-key">A</div>
+        <div class="kbd-key">S</div>
+        <div class="kbd-key">D</div>
+        <div class="kbd-key">F</div>
+        <div class="kbd-key">G</div>
+        <div class="kbd-key">H</div>
+        <div class="kbd-key">J</div>
+        <div class="kbd-key">K</div>
+        <div class="kbd-key">L</div>
+      </div>
+      <div class="kbd-row r3">
+        <div class="kbd-key shift">⇧</div>
+        <div class="kbd-key">Z</div>
+        <div class="kbd-key">X</div>
+        <div class="kbd-key">C</div>
+        <div class="kbd-key">V</div>
+        <div class="kbd-key">B</div>
+        <div class="kbd-key">N</div>
+        <div class="kbd-key">M</div>
+        <div class="kbd-key space">space</div>
+      </div>
+      <div class="kbd-foot">
+        <span class="live"><span class="dot"></span> Live · BlackHole 2ch</span>
+        <span>Q → rimshot.mp3</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bench: three claims, ledger style -->
+  <div class="bench section-inner">
+    <div class="bench-row">
+      <div class="id">01 / Latency</div>
+      <h4>Keypress to audio in under 40ms.</h4>
+      <p>The tile lights before the sound plays. You never wonder if the press registered.</p>
+    </div>
+    <div class="bench-row">
+      <div class="id">02 / Routing</div>
+      <h4>Pick any output device.</h4>
+      <p>Real device enumeration via setSinkId. Route to BlackHole, AirPods, or an external interface.</p>
+    </div>
+    <div class="bench-row">
+      <div class="id">03 / Pricing</div>
+      <h4>Free. No telemetry. No account.</h4>
+      <p>All settings live in a JSON file at ~/Library/Application Support/MeetingBoost. That's it.</p>
+    </div>
+  </div>
+</header>
+
+<!-- ──────────────────────────────────────────────────────────────────────
+     How it routes
+     ────────────────────────────────────────────────────────────────────── -->
+<section id="how" aria-labelledby="how-h">
+  <div class="section-inner">
+    <div class="section-eyebrow"><span class="num">§ 01</span><span>How it routes</span><span class="rule"></span></div>
+    <h2 id="how-h">A keypress, a virtual mic, a meeting that hears you.</h2>
+    <p>
+      MeetingBoost lives in the menu bar and pins a 520×580 window above your other apps. The window listens for letter keys (with Accessibility permission, even when it's not focused). Each key fires an MP3 through your selected output device. Send that output to BlackHole 2ch, and your meeting's microphone picks it up.
+    </p>
+
+    <div class="routes">
+      <div class="route-card input">
+        <div class="label">Input</div>
+        <h4>Q on your keyboard</h4>
+        <p>The board sees the keydown, lights the tile, fires the bound sound at the configured volume.</p>
+      </div>
+      <div class="arrow-col">
+        <code>setSinkId()</code>
+        <div class="arrow-line"></div>
+        <code>BlackHole 2ch</code>
+      </div>
+      <div class="route-card output">
+        <div class="label">Output</div>
+        <h4>Mic input on the call</h4>
+        <p>Zoom, Teams, or Meet hear it as your microphone. The whole room laughs. Nobody saw you click anything.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────────────────────────────────────────────────────
+     Showcase — five real product screenshots
+     ────────────────────────────────────────────────────────────────────── -->
+<section id="showcase" aria-labelledby="showcase-h">
+  <div class="section-inner">
+    <div class="section-eyebrow"><span class="num">§ 02</span><span>The product</span><span class="rule"></span></div>
+    <h2 id="showcase-h">Five surfaces. One muscle memory.</h2>
+    <p>Every screen in MeetingBoost shares the same vocabulary: monospace labels, amber for what's live, a 3-pixel keycap drop-shadow that collapses on press. The board is the primary; everything else exists to feed it.</p>
+
+    <div class="showcase-grid">
+      <figure class="shot span-7">
+        <img src="../assets/screenshots/board-lit.png" alt="The MeetingBoost board with two keys lit in amber after firing a sound" loading="lazy" width="1040" height="1160" />
+        <figcaption class="cap"><strong>Board</strong> · keys lit on press <span class="num">01</span></figcaption>
+      </figure>
+      <figure class="shot span-5">
+        <img src="../assets/screenshots/board-default.png" alt="The MeetingBoost board in its default state with the Classics pack loaded" loading="lazy" width="1040" height="1160" />
+        <figcaption class="cap"><strong>Board</strong> · Classics loaded <span class="num">02</span></figcaption>
+      </figure>
+      <figure class="shot span-4">
+        <img src="../assets/screenshots/packs.png" alt="The Pack browser screen showing Classics selected with all 11 sounds previewed" loading="lazy" width="1480" height="1280" />
+        <figcaption class="cap"><strong>Packs</strong> · pack browser <span class="num">03</span></figcaption>
+      </figure>
+      <figure class="shot span-4">
+        <img src="../assets/screenshots/sound-manager.png" alt="The Add Sound screen showing the YouTube clip route with waveform and start/end inputs" loading="lazy" width="1480" height="1280" />
+        <figcaption class="cap"><strong>Add</strong> · clip a YouTube video to a key <span class="num">04</span></figcaption>
+      </figure>
+      <figure class="shot span-4">
+        <img src="../assets/screenshots/settings.png" alt="The Settings screen on the Audio tab showing the virtual output device picker" loading="lazy" width="1480" height="1280" />
+        <figcaption class="cap"><strong>Settings</strong> · audio routing <span class="num">05</span></figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────────────────────────────────────────────────────
+     Packs — 3 official + your own
+     ────────────────────────────────────────────────────────────────────── -->
+<section id="packs" aria-labelledby="packs-h">
+  <div class="section-inner">
+    <div class="section-eyebrow"><span class="num">§ 03</span><span>Sound packs</span><span class="rule"></span></div>
+    <h2 id="packs-h">Three packs ship in the box.</h2>
+    <p>26 sounds across three curated packs. Hot-swap from the Packs screen and the board re-skins instantly. Each pack maps to the same Q–T / A–G / Z–B physical key positions, so muscle memory carries over.</p>
+
+    <div class="pack-row">
+      <div class="meta">
+        <span class="pack-id">Pack 01 / Classics</span>
+        <h3>The classics</h3>
+        <p class="pack-tag">Timeless meeting reactions. Rimshot, sad trombone, applause. The ones every audience already knows.</p>
+        <span class="pack-count">11 sounds · ships by default</span>
+      </div>
+      <div class="pack-keys">
+        <div class="pack-key"><span class="key">Q</span> Rimshot</div>
+        <div class="pack-key"><span class="key">W</span> Sad Trombone</div>
+        <div class="pack-key"><span class="key">E</span> Airhorn</div>
+        <div class="pack-key"><span class="key">R</span> Applause</div>
+        <div class="pack-key"><span class="key">T</span> Crickets</div>
+        <div class="pack-key"><span class="key">A</span> Ding!</div>
+        <div class="pack-key"><span class="key">S</span> Bruh</div>
+        <div class="pack-key"><span class="key">D</span> Fail Trumpet</div>
+        <div class="pack-key"><span class="key">F</span> Evil Laugh</div>
+        <div class="pack-key"><span class="key">G</span> Booing</div>
+        <div class="pack-key"><span class="key">Z</span> To Be…</div>
+      </div>
+    </div>
+
+    <div class="pack-row">
+      <div class="meta">
+        <span class="pack-id">Pack 02 / Corporate Warfare</span>
+        <h3>Corporate warfare</h3>
+        <p class="pack-tag">For when the deck has been recycled twice and someone says synergy without irony. A reaction layer on top of the language.</p>
+        <span class="pack-count">8 sounds · curated</span>
+      </div>
+      <div class="pack-keys">
+        <div class="pack-key"><span class="key">Q</span> Synergy!</div>
+        <div class="pack-key"><span class="key">W</span> WRONG</div>
+        <div class="pack-key"><span class="key">E</span> Buzzer</div>
+        <div class="pack-key"><span class="key">R</span> Crickets</div>
+        <div class="pack-key"><span class="key">T</span> Slack DM</div>
+        <div class="pack-key"><span class="key">A</span> Email Sent</div>
+        <div class="pack-key"><span class="key">S</span> Notification</div>
+        <div class="pack-key"><span class="key">D</span> Alert</div>
+      </div>
+    </div>
+
+    <div class="pack-row">
+      <div class="meta">
+        <span class="pack-id">Pack 03 / Hype Machine</span>
+        <h3>Hype machine</h3>
+        <p class="pack-tag">High-amplitude reactions for product demos and end-of-quarter celebrations. Use sparingly. They land harder when they're rare.</p>
+        <span class="pack-count">7 sounds · curated</span>
+      </div>
+      <div class="pack-keys">
+        <div class="pack-key"><span class="key">Q</span> Vine Boom</div>
+        <div class="pack-key"><span class="key">W</span> Stinger</div>
+        <div class="pack-key"><span class="key">E</span> Win!</div>
+        <div class="pack-key"><span class="key">R</span> Power Up</div>
+        <div class="pack-key"><span class="key">T</span> Drumroll</div>
+        <div class="pack-key"><span class="key">A</span> Cheer</div>
+        <div class="pack-key"><span class="key">S</span> Lvl Up</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────────────────────────────────────────────────────
+     Three input routes
+     ────────────────────────────────────────────────────────────────────── -->
+<section id="add" aria-labelledby="add-h">
+  <div class="section-inner">
+    <div class="section-eyebrow"><span class="num">§ 04</span><span>Bring your own sounds</span><span class="rule"></span></div>
+    <h2 id="add-h">Three ways onto the board.</h2>
+    <p>Voice memo, YouTube excerpt, shared archive. Every route ends the same way: a key, a label, a sound on the board.</p>
+
+    <div class="routes-3">
+      <div class="route3">
+        <span class="num">Route 01</span>
+        <h4>Record your voice</h4>
+        <p>Click the mic, speak for up to 30 seconds, listen back, name it, hit Add. Lives at <code>src/sounds/custom/</code>.</p>
+        <div class="glyph glyph-mic">
+          <span class="mic-bar"></span><span class="mic-bar"></span><span class="mic-bar"></span><span class="mic-bar"></span><span class="mic-bar"></span><span class="mic-bar"></span><span class="mic-bar"></span>
+          <span class="label-tail">REC · 00:04</span>
+        </div>
+      </div>
+      <div class="route3">
+        <span class="num">Route 02</span>
+        <h4>Clip a YouTube video</h4>
+        <p>Paste a URL, scrub to a 1-to-10 second excerpt, assign it to a key. yt-dlp + ffmpeg handle the rest.</p>
+        <div class="glyph glyph-yt" aria-hidden="true">
+          <div class="wave">
+            <i style="height:6px"></i><i style="height:14px"></i><i style="height:22px"></i><i style="height:28px" class="in"></i><i style="height:34px" class="in"></i><i style="height:24px" class="in"></i><i style="height:18px" class="in"></i><i style="height:30px" class="in"></i><i style="height:22px"></i><i style="height:14px"></i><i style="height:8px"></i><i style="height:18px"></i><i style="height:26px"></i><i style="height:12px"></i><i style="height:8px"></i><i style="height:16px"></i><i style="height:24px"></i><i style="height:30px"></i><i style="height:18px"></i><i style="height:10px"></i>
+          </div>
+          <span class="label-tail">02.4s</span>
+        </div>
+      </div>
+      <div class="route3">
+        <span class="num">Route 03</span>
+        <h4>Import an .mbpack</h4>
+        <p>A zip with a fixed layout. Drop one in, MeetingBoost merges it. On id collision it auto-suffixes, never clobbers.</p>
+        <div class="glyph glyph-mb">
+          <span class="dim">my-pack.mbpack</span><br />
+          <span class="dim">├</span> manifest.json<br />
+          <span class="dim">└</span> sounds/<br />
+          <span class="dim">&nbsp;&nbsp;├</span> <span class="am">rimshot.mp3</span><br />
+          <span class="dim">&nbsp;&nbsp;└</span> <span class="am">sad-trombone.mp3</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────────────────────────────────────────────────────
+     mbpack format
+     ────────────────────────────────────────────────────────────────────── -->
+<section id="format" aria-labelledby="format-h">
+  <div class="section-inner">
+    <div class="section-eyebrow"><span class="num">§ 05</span><span>The .mbpack format</span><span class="rule"></span></div>
+    <h2 id="format-h">A zip with a manifest. Pass it like a USB stick.</h2>
+    <div class="format-grid">
+      <div class="format-prose">
+        <p>One file, one pack, no installer. The format is a regular zip with a fixed layout: <code>manifest.json</code> at the root and an <code>sounds/</code> directory of MP3s. Both <code>zip</code> and <code>unzip</code> ship with macOS, so no extra runtime is needed to round-trip.</p>
+        <p>Hand a designer your "Demo Day" pack as a single 2 MB file. Their MeetingBoost merges it on import. If their existing pack collides on id, it auto-suffixes (your-pack → your-pack-2). Nothing gets clobbered, ever.</p>
+        <p style="margin-top: 22px;">
+          <a class="btn" href="#install">Install · then run <code style="background:var(--s2);padding:2px 8px;border-radius:4px;font-size:.78rem;margin-left:8px;border:1px solid var(--hairline);">make example-pack</code> <span class="arrow">→</span></a>
+        </p>
+      </div>
+      <div class="code-block" aria-label="manifest.json example">
+        <div class="code-head">
+          <span class="dot-row" aria-hidden="true"><span class="am"></span><span></span><span></span></span>
+          <span>manifest.json</span>
+        </div>
+        <pre class="code-body">{
+  <span class="k">"mbpackVersion"</span>: <span class="am">1</span>,
+  <span class="k">"id"</span>:            <span class="s">"classics"</span>,
+  <span class="k">"name"</span>:          <span class="s">"Classics"</span>,
+  <span class="k">"description"</span>:   <span class="s">"Timeless meeting reactions"</span>,
+  <span class="k">"keys"</span>: {
+    <span class="k">"q"</span>: { <span class="k">"label"</span>: <span class="s">"Rimshot"</span>,      <span class="k">"file"</span>: <span class="s">"sounds/rimshot.mp3"</span> },
+    <span class="k">"w"</span>: { <span class="k">"label"</span>: <span class="s">"Sad Trombone"</span>, <span class="k">"file"</span>: <span class="s">"sounds/sad-trombone.mp3"</span> }
+  },
+  <span class="k">"exportedAt"</span>: <span class="s">"2026-05-01T12:00:00.000Z"</span>
+}</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────────────────────────────────────────────────────
+     Install
+     ────────────────────────────────────────────────────────────────────── -->
+<section id="install" aria-labelledby="install-h">
+  <div class="section-inner">
+    <div class="section-eyebrow"><span class="num">§ 06</span><span>Install</span><span class="rule"></span></div>
+    <h2 id="install-h">Four lines from clone to keyboard.</h2>
+    <p>If you have node and a fresh terminal, you're ninety seconds away from a board that fires sounds. The downloader pulls 26 royalty-free MP3s from Pixabay (about 10 MB total).</p>
+
+    <div class="install-grid">
+      <div class="terminal" role="region" aria-label="Install commands">
+        <div class="terminal-head">
+          <span class="ctrl"><span class="am"></span><span></span><span></span></span>
+          <span class="title">~/code/meetingboost</span>
+        </div>
+        <div class="terminal-body">
+          <div class="cmd"><span class="prompt">$</span><code>brew install node@20 ffmpeg yt-dlp</code><button class="copy" data-copy="brew install node@20 ffmpeg yt-dlp">Copy</button></div>
+          <div class="cmd"><span class="prompt">$</span><code>git clone https://github.com/extrain-pascal/meetingboost.git</code><button class="copy" data-copy="git clone https://github.com/extrain-pascal/meetingboost.git">Copy</button></div>
+          <div class="cmd"><span class="prompt">$</span><code>cd meetingboost && npm install</code><button class="copy" data-copy="cd meetingboost && npm install">Copy</button></div>
+          <div class="cmd"><span class="prompt">$</span><code>make sounds && make dev</code><button class="copy" data-copy="make sounds && make dev">Copy</button></div>
+        </div>
+      </div>
+
+      <div class="requirements" aria-label="Requirements">
+        <div class="req"><strong>macOS</strong><span class="why">Electron 32 minimum.</span><span class="ver">13.0+</span></div>
+        <div class="req"><strong>node</strong><span class="why">TypeScript build and Electron runtime.</span><span class="ver">20+</span></div>
+        <div class="req"><strong>ffmpeg</strong><span class="why">Cropping YouTube clips, transcoding voice memos.</span><span class="ver">6+</span></div>
+        <div class="req"><strong>yt-dlp</strong><span class="why">YouTube audio download.</span><span class="ver">recent</span></div>
+        <div class="req"><strong>BlackHole</strong><span class="why">Virtual audio driver. Optional but the whole point.</span><span class="ver">2ch</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────────────────────────────────────────────────────
+     FAQ
+     ────────────────────────────────────────────────────────────────────── -->
+<section id="faq" aria-labelledby="faq-h">
+  <div class="section-inner">
+    <div class="section-eyebrow"><span class="num">§ 07</span><span>FAQ</span><span class="rule"></span></div>
+    <h2 id="faq-h">Five things people ask before installing.</h2>
+
+    <div class="faq">
+      <div class="qa">
+        <h4>Will my coworkers know I'm using a soundboard?</h4>
+        <p>Only if you tell them. From the meeting's perspective, the audio comes through your microphone the same way your voice does. There's no banner, no badge, no "powered by".</p>
+      </div>
+      <div class="qa">
+        <h4>Does this work without BlackHole?</h4>
+        <p>Yes for local listening, no for meeting injection. Without a virtual driver, the sounds play through your speakers but the meeting can't hear them. BlackHole is the missing wire between this app and Zoom.</p>
+      </div>
+      <div class="qa">
+        <h4>Why is global keyboard capture asking for Accessibility permission?</h4>
+        <p>macOS gates global keystroke listeners behind Accessibility. We need it so letter keys fire sounds even when the board isn't the focused window. If you decline, sounds still fire when the board has focus.</p>
+      </div>
+      <div class="qa">
+        <h4>Is there telemetry?</h4>
+        <p>No. No analytics, no crash reporting, no "anonymous usage data". Settings are a single JSON file you can read, edit, and delete.</p>
+      </div>
+      <div class="qa">
+        <h4>Can I redistribute my custom packs?</h4>
+        <p>Yes, the .mbpack format is the whole point. Export from the Packs screen and share the file. Make sure the audio inside is yours to share.</p>
+      </div>
+      <div class="qa">
+        <h4>Windows? Linux?</h4>
+        <p>Not yet. The Electron app would compile, but the audio routing layer assumes BlackHole and the global key listener uses CGEventTap. A port is on the long-term list.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────────────────────────────────────────────────────
+     Final call
+     ────────────────────────────────────────────────────────────────────── -->
+<section class="final-call">
+  <div class="section-inner">
+    <h2>Press <span class="am">Q</span> for rimshot.<br />Win the call.</h2>
+    <p>One file, one keypress, one perfectly-timed reaction. Free, MIT-licensed, no account.</p>
+    <div class="hero-cta">
+      <a class="btn primary" href="https://github.com/extrain-pascal/meetingboost/releases/latest">
+        Download MeetingBoost <span class="arrow">↓</span>
+      </a>
+      <a class="btn" href="https://github.com/extrain-pascal/meetingboost">
+        Read the source <span class="arrow">→</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span class="sig">© 2026 MeetingBoost · MIT license · Built in TypeScript &amp; Electron.</span>
+  <nav>
+    <a href="https://github.com/extrain-pascal/meetingboost">GitHub</a>
+    <a href="https://github.com/extrain-pascal/meetingboost/blob/main/SHIPPING.md">Roadmap</a>
+    <a href="https://github.com/extrain-pascal/meetingboost/blob/main/CONTRIBUTING.md">Contributing</a>
+  </nav>
+</footer>
+
+<script>
+  // Copy buttons — direct DOM, no library
+  document.querySelectorAll('.copy[data-copy]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const text = btn.getAttribute('data-copy') || '';
+      try {
+        await navigator.clipboard.writeText(text);
+        const prev = btn.textContent;
+        btn.textContent = 'Copied';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = prev;
+          btn.classList.remove('copied');
+        }, 1400);
+      } catch {
+        // Older Safari / Permissions denied — fall back silently.
+      }
+    });
+  });
+
+  // Reveal-on-scroll. Single observer, single pass, honors prefers-reduced-motion.
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const targets = document.querySelectorAll('section .section-inner, .hero-grid, .bench');
+  if (!reduce && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in');
+          io.unobserve(entry.target);
+        }
+      }
+    }, { rootMargin: '0px 0px -10% 0px' });
+    targets.forEach((t) => { t.classList.add('reveal'); io.observe(t); });
+  }
+</script>
+
+</body>
+</html>

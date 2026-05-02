@@ -1139,6 +1139,10 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => { /* tray app — stay alive until explicit quit */ });
+// Anything that reaches `before-quit` (Cmd+Q, app.quit() from Playwright,
+// macOS shutdown) is a real exit — flip the flag so the board's "hide on
+// close" handler stops vetoing the close.
+app.on('before-quit', () => { isQuitting = true; });
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
   stopGlobalCapture();
