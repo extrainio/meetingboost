@@ -71,13 +71,19 @@ jobs:
             echo "signed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # When CSC + Apple notary secrets are all present, also require Gatekeeper (spctl) to pass CI.
-      - name: Resolve bundle verification strictness
+      # Unsigned (no Developer ID): structural checks only — Electron ad-hoc bundles often fail
+      # `codesign --verify` (linker-signed components). Signed CI: strict verify + optional spctl.
+      - name: Resolve bundle verification modes
         id: verify
         env:
           SIGNED: ${{ steps.signing.outputs.signed }}
           HAS_NOTARY_CREDS: ${{ secrets.APPLE_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
         run: |
+          if [ "$SIGNED" = "true" ]; then
+            echo "strict_codesign=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "strict_codesign=0" >> "$GITHUB_OUTPUT"
+          fi
           if [ "$SIGNED" = "true" ] && [ "$HAS_NOTARY_CREDS" = "true" ]; then
             echo "require_gatekeeper=1" >> "$GITHUB_OUTPUT"
           else
@@ -108,6 +114,7 @@ jobs:
       - name: Verify macOS app bundle
         run: bash scripts/verify-macos-bundle.sh
         env:
+          STRICT_CODESIGN_VERIFY: ${{ steps.verify.outputs.strict_codesign }}
           REQUIRE_GATEKEEPER_PASS: ${{ steps.verify.outputs.require_gatekeeper }}
 
       - name: Upload artifacts

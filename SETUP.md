@@ -126,7 +126,21 @@ npm run verify:mac-bundle                                    # defaults to relea
 scripts/verify-macos-bundle.sh '/Volumes/MeetingBoost/MeetingBoost.app'   # DMG-mounted copy
 ```
 
-The script runs `codesign --verify --deep --strict`. Optionally set `REQUIRE_GATEKEEPER_PASS=1` to require `spctl -a -vv` (CI does this automatically when CSC + Apple notary secrets are all configured).
+By default this checks **bundle layout only** — enough for CI and local builds **without an Apple Developer account**. Electron **ad hoc** bundles often fail `codesign --verify` (linker-signed components); strict signing checks are meaningless until you use **Developer ID**.
+
+For a **Developer ID** build locally, enable strict verification:
+
+```bash
+STRICT_CODESIGN_VERIFY=1 ./scripts/verify-macos-bundle.sh
+```
+
+Combine with Gatekeeper rehearsal (needs notarisation to pass reliably):
+
+```bash
+STRICT_CODESIGN_VERIFY=1 REQUIRE_GATEKEEPER_PASS=1 ./scripts/verify-macos-bundle.sh
+```
+
+CI passes **`STRICT_CODESIGN_VERIFY=1`** when signing secrets (**`CSC_*`**) exist, and **`REQUIRE_GATEKEEPER_PASS=1`** when those plus all Apple notary secrets are configured.
 
 Extras by hand:
 
@@ -176,6 +190,8 @@ The `xattr -cr` removes `com.apple.quarantine` so Gatekeeper stops
 mis-reporting it.
 
 ### Real fix (do this before public ship)
+
+**Without a paid Apple Developer Program membership** ($99/yr) you cannot issue **Developer ID** signatures or **notarise**. Public downloaders will keep seeing Gatekeeper warnings; use § 2 **workarounds** (ZIP + `xattr -cr` + Right-click → Open) for testers you trust until you enrol.
 
 See `SHIPPING.md` § "Code-signing & notarization":
 

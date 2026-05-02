@@ -7,8 +7,9 @@
 # Default path: release/mac-arm64/MeetingBoost.app
 #
 # Optional env:
-#   REQUIRE_GATEKEEPER_PASS=1  — also run `spctl -a -vv` and fail if Gatekeeper rejects.
-#                                Use after Developer ID signing + notarization (release CI).
+#   STRICT_CODESIGN_VERIFY=1   — run `codesign --verify --deep --strict` (needs Developer ID flow;
+#                                 ad-hoc / linker-signed Electron often fails Apple's verify.)
+#   REQUIRE_GATEKEEPER_PASS=1  — also run `spctl -a -vv`; use after sign + notarization in CI.
 #
 set -euo pipefail
 
@@ -20,8 +21,41 @@ if [[ ! -d "${APP}" ]]; then
   exit 1
 fi
 
-echo "==> codesign verify (deep, strict)"
-codesign --verify --deep --strict --verbose=2 "${APP}"
+INF="${APP}/Contents/Info.plist"
+EXE_NAME="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "${INF}" 2>/dev/null || true)"
+if [[ -z "${EXE_NAME}" ]]; then
+  echo "error: cannot read CFBundleExecutable from ${INF}" >&2
+  exit 1
+fi
+
+MAIN="${APP}/Contents/MacOS/${EXE_NAME}"
+
+echo "==> bundle layout (adhoc-safe)"
+for p in Contents/Info.plist "Contents/MacOS/${EXE_NAME}" Contents/PkgInfo; do
+  if [[ ! -e "${APP}/${p}" ]]; then
+    echo "error: missing ${APP}/${p}" >&2
+    exit 1
+  fi
+done
+if [[ ! -x "${MAIN}" ]]; then
+  echo "error: main executable not executable: ${MAIN}" >&2
+  exit 1
+fi
+if [[ ! -e "${APP}/Contents/Frameworks/Electron Framework.framework" ]]; then
+  echo "error: missing Electron Framework.framework" >&2
+  exit 1
+fi
+if [[ ! -e "${APP}/Contents/Resources/app.asar" ]] && [[ ! -d "${APP}/Contents/Resources/app.asar.unpacked" ]]; then
+  echo "error: missing Contents/Resources app payload (asar or asar.unpacked)" >&2
+  exit 1
+fi
+
+echo "ok: bundle layout (${EXE_NAME})"
+
+if [[ "${STRICT_CODESIGN_VERIFY:-}" == "1" ]]; then
+  echo "==> codesign verify (deep, strict) — Developer ID builds only"
+  codesign --verify --deep --strict --verbose=2 "${APP}"
+fi
 
 if [[ "${REQUIRE_GATEKEEPER_PASS:-}" == "1" ]]; then
   echo "==> Gatekeeper assessment (spctl)"

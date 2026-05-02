@@ -31,7 +31,7 @@ so the diff is clear; everything unchecked is real work.
 - [x] **First-run onboarding** — 3-step overlay (welcome → BlackHole → Accessibility) on first launch. Persisted via the `onboardingComplete` setting.
 - [x] **Local DMG build verified** — `release/MeetingBoost-1.0.0-beta-arm64.dmg` (99.6 MB, checksum valid). Tray template image, native key-listener helper, and DMG background all bundled correctly.
 - [x] **`mac.notarize: true`** in `package.json#build` — notarization runs when Apple notary credentials are set in CI; skipped otherwise (`SETUP.md`).
-- [x] **`scripts/verify-macos-bundle.sh`** + release workflow verification step (`codesign` deep/strict always; **`spctl` when CSC + all Apple notary secrets are present**).
+- [x] **`scripts/verify-macos-bundle.sh`** + release-workflow verification: **layout-only** without `CSC_*`; **`codesign --verify --deep --strict`** plus optional **`spctl`** when Developer ID + notary credentials are configured in CI (`SETUP.md`).
 
 ---
 
