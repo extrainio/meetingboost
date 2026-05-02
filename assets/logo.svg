@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    MeetingBoost app icon. Uses hex colors only — `oklch()` is not understood
+    by most SVG-to-PNG rasterizers (rsvg, ImageMagick), so the previous
+    oklch-based version rendered as a black square. Brand: dark warm bg with
+    an amber waveform — matches the in-app design system.
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#1a1612"/>
+      <stop offset="100%" stop-color="#0a0907"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#b56b0a"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="14" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <clipPath id="round">
+      <rect width="1024" height="1024" rx="220" ry="220"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1024" height="1024" rx="220" ry="220" fill="url(#bg)"/>
+
+  <g clip-path="url(#round)">
+    <!-- Subtle inner highlight at top edge — mimics the keycap bevel from the board UI -->
+    <rect x="0" y="0" width="1024" height="3" fill="#ffffff" opacity="0.06"/>
+  </g>
+
+  <!-- Waveform — 7 bars, rising-peak-falling. Center x = 512, bar w = 56, gap = 24,
+       total span = 7*56 + 6*24 = 536, starts at x = 244. -->
+  <g clip-path="url(#round)" filter="url(#glow)">
+    <rect x="244" y="496" width="56" height="180" rx="28" fill="url(#accent)" opacity="0.55"/>
+    <rect x="324" y="408" width="56" height="268" rx="28" fill="url(#accent)" opacity="0.70"/>
+    <rect x="404" y="344" width="56" height="332" rx="28" fill="url(#accent)" opacity="0.85"/>
+    <rect x="484" y="296" width="56" height="380" rx="28" fill="url(#accent)" opacity="1.00"/>
+    <rect x="564" y="344" width="56" height="332" rx="28" fill="url(#accent)" opacity="0.85"/>
+    <rect x="644" y="408" width="56" height="268" rx="28" fill="url(#accent)" opacity="0.70"/>
+    <rect x="724" y="496" width="56" height="180" rx="28" fill="url(#accent)" opacity="0.55"/>
+  </g>
+
+  <!-- "M" mark sub-baseline — quietly references MeetingBoost without competing with the wave -->
+  <rect x="362" y="752" width="300" height="6" rx="3" fill="#f59e0b" opacity="0.35"/>
+  <rect x="362" y="752" width="6"   height="42" rx="3" fill="#f59e0b" opacity="0.55"/>
+  <rect x="656" y="752" width="6"   height="42" rx="3" fill="#f59e0b" opacity="0.55"/>
+</svg>

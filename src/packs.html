@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeetingBoost – Packs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      oklch(7.5% 0.006 75);
+  --s1:      oklch(10.5% 0.007 75);
+  --s2:      oklch(13.5% 0.008 75);
+  --s3:      oklch(18% 0.009 75);
+  --s4:      oklch(22% 0.010 75);
+
+  --border:  oklch(100% 0 0 / 5.5%);
+  --bhi:     oklch(100% 0 0 / 11%);
+
+  --text:    oklch(88% 0.007 78);
+  --muted:   oklch(36% 0.006 76);
+  --muted2:  oklch(52% 0.007 76);
+
+  --amber:      oklch(67% 0.17 72);
+  --amber-d:    oklch(54% 0.15 72);
+  --amber-bg:   oklch(67% 0.17 72 / 10%);
+  --amber-ring: oklch(67% 0.17 72 / 20%);
+
+  --nav-bg:  oklch(7.5% 0.006 75 / 82%);
+}
+
+:root[data-theme="light"] {
+  --bg:      oklch(98%   0.005 80);
+  --s1:      oklch(92.5% 0.006 78);
+  --s2:      oklch(87%   0.007 78);
+  --s3:      oklch(80%   0.008 78);
+  --s4:      oklch(72%   0.008 78);
+
+  --border:  oklch(0% 0 0 / 12%);
+  --bhi:     oklch(0% 0 0 / 22%);
+
+  --text:    oklch(13% 0.013 78);
+  --muted:   oklch(45% 0.010 76);
+  --muted2:  oklch(30% 0.010 76);
+
+  --amber-bg:   oklch(67% 0.17 72 / 14%);
+  --amber-ring: oklch(67% 0.17 72 / 26%);
+
+  --nav-bg:  oklch(98% 0.005 80 / 92%);
+}
+
+:root[data-theme="light"] body::before {
+  background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 50%, oklch(0% 0 0 / 8%) 100%);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  display: flex; flex-direction: column;
+  height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, oklch(0% 0 0 / 38%) 100%);
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+}
+
+.nav, .layout, .footer { position: relative; z-index: 2; }
+
+
+/* ── NAV ──────────────────────────────────────── */
+.nav {
+  height: 52px;
+  display: flex; align-items: center;
+  padding: 0 20px; gap: 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--nav-bg);
+  backdrop-filter: blur(14px);
+  -webkit-app-region: drag;
+}
+.logo { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+.logo-mark {
+  width: 26px; height: 26px;
+  border: 1.5px solid var(--amber); border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px; font-weight: 900; color: var(--amber);
+}
+.logo-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 17px; font-weight: 900;
+  letter-spacing: 1.5px; text-transform: uppercase; color: var(--text);
+}
+.sep { width: 1px; height: 18px; background: var(--border); margin: 0 18px; flex-shrink: 0; }
+.breadcrumb {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 10px; white-space: nowrap;
+  -webkit-app-region: no-drag;
+}
+.bc-prev { color: var(--muted2); cursor: pointer; transition: color 0.12s; }
+.bc-prev:hover { color: var(--text); }
+.bc-div  { color: var(--muted); }
+.bc-cur  { color: var(--amber); font-weight: 700; }
+.nav-right { margin-left: auto; -webkit-app-region: no-drag; }
+.close-btn {
+  width: 28px; height: 28px;
+  background: var(--s1); border: 1px solid var(--border); border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: var(--muted2); cursor: pointer;
+  transition: color 0.12s, border-color 0.12s; user-select: none;
+}
+.close-btn:hover { color: var(--text); border-color: var(--bhi); }
+
+
+/* ── LAYOUT ──────────────────────────────────── */
+.layout {
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: 252px 1fr;
+}
+
+
+/* ── PACK LIST (left) ────────────────────────── */
+.pack-list {
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  min-height: 0; overflow: hidden;
+}
+
+.list-head {
+  padding: 16px 16px 12px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.list-head-row { display: flex; align-items: center; justify-content: space-between; }
+.list-lbl {
+  font-size: 9px; font-weight: 700; letter-spacing: 2.5px;
+  text-transform: uppercase; color: var(--muted);
+}
+.list-count { font-size: 9px; color: var(--muted); }
+
+.search-wrap { position: relative; }
+.search-inp {
+  width: 100%; background: var(--s1);
+  border: 1px solid var(--border); border-radius: 4px;
+  padding: 7px 10px 7px 28px;
+  color: var(--text); font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.search-inp:focus { border-color: var(--amber-d); box-shadow: 0 0 0 3px var(--amber-ring); }
+.search-inp::placeholder { color: var(--muted); }
+.search-icon {
+  position: absolute; left: 9px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px; color: var(--muted); pointer-events: none;
+}
+
+.list-scroll { flex: 1; overflow-y: auto; padding: 8px 0; }
+.list-scroll::-webkit-scrollbar { width: 3px; }
+.list-scroll::-webkit-scrollbar-thumb { background: var(--s4); border-radius: 99px; }
+
+.btn-new-pack {
+  margin-top: 10px; width: 100%;
+  background: var(--amber-bg); border: 1px solid var(--amber-ring);
+  color: var(--amber); font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+  padding: 7px 10px; border-radius: 4px; cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.btn-new-pack:hover { background: oklch(67% 0.17 72 / 18%); border-color: var(--amber); }
+
+.np-overlay {
+  position: fixed; inset: 0; z-index: 999;
+  background: oklch(0% 0 0 / 65%); backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+}
+.np-overlay[hidden] { display: none; }
+.np-card {
+  background: var(--s2); border: 1px solid var(--bhi);
+  border-radius: 6px; padding: 22px;
+  width: 360px; max-width: 92%;
+  box-shadow: 0 24px 60px oklch(0% 0 0 / 50%);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.np-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 18px; font-weight: 900; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--text);
+}
+.np-input {
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: 4px; padding: 9px 11px;
+  color: var(--text); font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px; outline: none; width: 100%;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.np-input:focus { border-color: var(--amber-d); box-shadow: 0 0 0 3px var(--amber-ring); }
+.np-row { display: flex; justify-content: flex-end; gap: 8px; }
+
+.list-section-lbl {
+  font-size: 9px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--muted);
+  padding: 8px 16px 4px;
+}
+
+.pack-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: background 0.1s;
+  user-select: none;
+  position: relative;
+}
+.pack-row:hover { background: var(--s1); }
+.pack-row.active { background: var(--amber-bg); }
+.pack-row.active::before {
+  content: '';
+  position: absolute; left: 5px; top: 50%;
+  transform: translateY(-50%);
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 5px var(--amber);
+}
+
+.pack-icon {
+  width: 32px; height: 32px; flex-shrink: 0;
+  background: var(--s2); border: 1px solid var(--border); border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; line-height: 1;
+  transition: background 0.12s;
+}
+.pack-row.active .pack-icon { background: var(--s3); }
+
+.pack-row-info { flex: 1; min-width: 0; }
+.pack-row-name {
+  font-size: 11px; font-weight: 700; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  letter-spacing: 0.2px;
+  transition: color 0.12s;
+}
+.pack-row.active .pack-row-name { color: var(--amber); }
+.pack-row-meta {
+  font-size: 9px; color: var(--muted2);
+  display: flex; gap: 8px; margin-top: 2px;
+}
+
+.pack-badge {
+  font-size: 8px; font-weight: 700; letter-spacing: 0.8px;
+  text-transform: uppercase; padding: 1px 5px; border-radius: 2px;
+  flex-shrink: 0; align-self: center;
+}
+.badge-official  { background: oklch(67% 0.17 72 / 14%); color: var(--amber); }
+.badge-community { background: var(--s3); color: var(--muted2); }
+.badge-custom    { background: var(--s3); color: var(--muted2); border: 1px solid var(--border); }
+.badge-active    { background: var(--amber); color: oklch(10% 0.01 75); font-weight: 900; }
+
+
+/* ── PACK PREVIEW (right) ────────────────────── */
+.preview {
+  display: flex; flex-direction: column;
+  min-height: 0; overflow: hidden;
+}
+
+.preview-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.preview-title-row {
+  display: flex; align-items: flex-start; gap: 14px; margin-bottom: 10px;
+}
+.preview-big-icon {
+  width: 44px; height: 44px; flex-shrink: 0;
+  background: var(--s2); border: 1px solid var(--border); border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; line-height: 1;
+}
+.preview-title-block { flex: 1; min-width: 0; }
+.preview-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 22px; font-weight: 900; letter-spacing: 0.5px;
+  text-transform: uppercase; line-height: 1;
+  color: var(--text);
+}
+.preview-byline {
+  font-size: 9px; color: var(--muted2); margin-top: 4px;
+  display: flex; gap: 10px; align-items: center;
+}
+.preview-byline b { color: var(--text); font-weight: 600; }
+
+.preview-desc {
+  font-size: 10px; color: var(--muted2); line-height: 1.55;
+  max-width: 56ch;
+}
+
+.preview-body {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 18px 24px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.preview-body::-webkit-scrollbar { width: 3px; }
+.preview-body::-webkit-scrollbar-thumb { background: var(--s4); border-radius: 99px; }
+
+.sounds-lbl {
+  font-size: 9px; font-weight: 700; letter-spacing: 2.5px;
+  text-transform: uppercase; color: var(--muted);
+}
+.sounds-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.mini-key {
+  position: relative;
+  background: var(--s1); border: 1px solid var(--border);
+  border-bottom: 2px solid var(--muted);
+  border-radius: 4px;
+  padding: 8px 6px 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  cursor: pointer; user-select: none;
+  transition: background 0.1s, border-color 0.1s, box-shadow 0.12s;
+  overflow: hidden;
+}
+.mini-key:hover {
+  background: var(--s2);
+  border-color: var(--bhi);
+  border-bottom-color: var(--muted2);
+  box-shadow: 0 3px 12px oklch(0% 0 0 / 30%);
+}
+.mini-key:active {
+  transform: translateY(1px);
+  border-bottom-width: 1px;
+}
+.mini-key.fired { animation: minitap 0.18s ease-out; }
+@keyframes minitap {
+  0%   { transform: translateY(1px); border-bottom-width: 1px; }
+  60%  { transform: translateY(-1px); }
+  100% { transform: translateY(0); }
+}
+.mini-key.lit {
+  border-color: var(--amber-d);
+  border-bottom: 2px solid var(--amber);
+  background: var(--amber-bg);
+}
+
+.mini-letter {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 22px; font-weight: 900; line-height: 1;
+  color: var(--muted); letter-spacing: -0.5px;
+  transition: color 0.1s;
+}
+.mini-key:hover .mini-letter { color: var(--muted2); }
+.mini-key.lit   .mini-letter { color: var(--amber); text-shadow: 0 0 12px oklch(67% 0.17 72 / 45%); }
+
+.mini-div { width: 100%; height: 1px; background: var(--border); }
+
+.mini-bottom {
+  display: flex; align-items: center; gap: 4px; width: 100%;
+}
+.mini-emoji {
+  font-size: 10px; line-height: 1; flex-shrink: 0;
+  filter: saturate(0.4);
+  transition: filter 0.1s;
+}
+.mini-key:hover .mini-emoji { filter: saturate(0.75); }
+.mini-key.lit   .mini-emoji { filter: saturate(1); }
+.mini-name {
+  font-size: 7.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.3px; color: var(--muted2); flex: 1;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  line-height: 1.2;
+  transition: color 0.1s;
+}
+.mini-key:hover .mini-name { color: var(--text); }
+.mini-key.lit   .mini-name { color: var(--amber); }
+
+.mini-key.empty {
+  border-style: dashed; border-color: var(--border);
+  border-bottom: 1px dashed var(--border);
+  opacity: 0.35; cursor: default;
+}
+.mini-key.empty .mini-letter { font-size: 16px; }
+
+/* Drag-drop affordances — empty tiles still need pointer-events for the
+   drop target to fire, so we re-enable them when a drag is in progress. */
+body.drag-active .mini-key.empty { pointer-events: auto; opacity: 0.55; }
+.mini-key.drop-target {
+  border-color: var(--amber);
+  border-bottom-color: var(--amber);
+  background: var(--amber-bg);
+  box-shadow: 0 0 0 2px var(--amber-ring);
+  opacity: 1;
+}
+.mini-key.user-bound::after {
+  content: '';
+  position: absolute; top: 4px; right: 4px;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--amber); opacity: 0.7;
+}
+
+/* Recordings rail above the keypad — drag sources within this same window. */
+.rec-rail {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; margin: 0 0 12px;
+  background: oklch(9% 0.006 75 / 60%);
+  border: 1px solid var(--border); border-radius: 6px;
+  min-height: 44px;
+}
+:root[data-theme="light"] .rec-rail { background: oklch(94% 0.007 78 / 70%); }
+.rec-rail-lbl {
+  font-size: 9px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--muted);
+  flex-shrink: 0; padding-right: 4px;
+}
+.rec-rail-list {
+  display: flex; gap: 6px; overflow-x: auto;
+  flex: 1; min-width: 0;
+}
+.rec-rail-list::-webkit-scrollbar { height: 4px; }
+.rec-rail-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.rec-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 99px;
+  background: var(--s2); border: 1px solid var(--border);
+  font-size: 10px; color: var(--text); font-weight: 600;
+  cursor: grab; user-select: none; flex-shrink: 0;
+  transition: background 0.12s, border-color 0.12s, opacity 0.12s;
+  max-width: 180px;
+}
+.rec-chip:hover { background: var(--s3); border-color: var(--bhi); }
+.rec-chip:active { cursor: grabbing; }
+.rec-chip.dragging { opacity: 0.45; }
+.rec-chip-handle { color: var(--muted); font-size: 11px; letter-spacing: -2px; }
+.rec-chip-kind   { color: var(--amber); font-size: 9px; opacity: 0.75; }
+.rec-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rec-chip-empty {
+  font-size: 10px; color: var(--muted); font-style: italic;
+}
+.rec-chip-cta {
+  font-size: 9px; color: var(--amber);
+  cursor: pointer; padding: 4px 8px;
+  border: 1px solid var(--amber-ring); border-radius: 99px;
+  font-weight: 700; letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: background 0.12s, color 0.12s;
+}
+.rec-chip-cta:hover { background: var(--amber); color: var(--bg); }
+
+.ripple {
+  position: fixed; border-radius: 50%; pointer-events: none;
+  transform: translate(-50%, -50%) scale(0);
+  animation: rip 0.45s ease-out forwards;
+  z-index: 9999; width: 40px; height: 40px;
+  background: oklch(67% 0.17 72 / 18%);
+}
+@keyframes rip { to { transform: translate(-50%, -50%) scale(7); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .mini-key.fired { animation: none; }
+  .ripple { display: none; }
+}
+
+
+/* ── FOOTER ─────────────────────────────────────── */
+.footer {
+  height: 52px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 20px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--nav-bg);
+  backdrop-filter: blur(14px);
+}
+
+.footer-info {
+  font-size: 9px; color: var(--muted);
+  display: flex; align-items: center; gap: 6px;
+}
+.footer-info b { color: var(--muted2); font-weight: 600; }
+.footer-active-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--amber); flex-shrink: 0;
+}
+
+.spacer { flex: 1; }
+
+.btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+  border: none; border-radius: 3px;
+  padding: 7px 14px; cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  text-transform: uppercase; white-space: nowrap;
+  transition: transform 0.08s, box-shadow 0.12s, opacity 0.12s;
+}
+.btn:hover  { transform: translateY(-1px); }
+.btn:active { transform: scale(0.97); }
+.btn-ghost {
+  background: var(--s1); border: 1px solid var(--border); color: var(--muted2);
+}
+.btn-ghost:hover { border-color: var(--bhi); color: var(--text); }
+.btn-primary {
+  background: var(--amber); color: oklch(10% 0.01 75);
+  font-weight: 900; letter-spacing: 0.8px;
+}
+.btn-primary:hover { box-shadow: 0 0 20px oklch(67% 0.17 72 / 32%); }
+.btn-primary.is-active {
+  background: var(--s2); border: 1px solid var(--amber-d); color: var(--amber);
+}
+.btn-primary.is-active:hover { box-shadow: none; }
+</style>
+<script>(function(){var t=localStorage.getItem('mb-theme')||'dark';document.documentElement.setAttribute('data-theme',t==='system'?(window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):t);})()</script>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="logo">
+    <div class="logo-mark">MB</div>
+    <div class="logo-name">MeetingBoost</div>
+  </div>
+  <div class="sep"></div>
+  <div class="breadcrumb">
+    <span class="bc-prev" onclick="window.electronAPI?.openBoard()">Board</span>
+    <span class="bc-div">/</span>
+    <span class="bc-cur">Packs</span>
+  </div>
+  <div class="nav-right">
+    <div class="close-btn" title="Back to Board" onclick="window.electronAPI?.closeWindow()">✕</div>
+  </div>
+</nav>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- PACK LIST -->
+  <aside class="pack-list">
+    <div class="list-head">
+      <div class="list-head-row">
+        <div class="list-lbl">Sound Packs</div>
+        <div class="list-count" id="listCount">7 packs</div>
+      </div>
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input class="search-inp" placeholder="Filter packs..." oninput="filterPacks(this.value)">
+      </div>
+      <button class="btn-new-pack" onclick="openNewPackPrompt()">+ New Pack</button>
+    </div>
+    <div class="list-scroll" id="packList"></div>
+  </aside>
+
+  <!-- New Pack inline prompt -->
+  <div id="newPackOverlay" class="np-overlay" hidden>
+    <div class="np-card" role="dialog" aria-label="New pack">
+      <div class="np-title">New Pack</div>
+      <input id="newPackName" class="np-input" placeholder="Pack name (e.g. Standup Energy)" maxlength="48">
+      <div class="np-row">
+        <button class="btn btn-ghost" onclick="closeNewPackPrompt()">Cancel</button>
+        <button class="btn btn-primary" onclick="confirmNewPack()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREVIEW PANEL -->
+  <section class="preview" id="previewPanel">
+    <div class="preview-header">
+      <div class="preview-title-row">
+        <div class="preview-big-icon" id="previewIcon">🎬</div>
+        <div class="preview-title-block">
+          <div class="preview-title" id="previewTitle">Classics</div>
+          <div class="preview-byline">
+            <span><b id="previewCount">15</b> sounds</span>
+            <span id="previewAuthor">Official pack</span>
+          </div>
+        </div>
+      </div>
+      <div class="preview-desc" id="previewDesc">
+        The essential meeting reactions. Rimshot, airhorn, sad trombone — the sounds everyone knows.
+      </div>
+    </div>
+    <div class="preview-body">
+      <div class="rec-rail" id="recRail">
+        <div class="rec-rail-lbl">My Library</div>
+        <div class="rec-rail-list" id="recRailList"></div>
+        <div class="rec-chip-cta" onclick="window.electronAPI?.openAddSound()" title="Add a sound (record or YouTube)">+ Add Sound</div>
+      </div>
+      <div class="sounds-lbl">Sounds in this pack — drag a library item onto a key</div>
+      <div class="sounds-grid" id="soundsGrid"></div>
+    </div>
+  </section>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="footer-info">
+    <div class="footer-active-dot"></div>
+    Active: <b id="footerActive">Classics</b>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn btn-ghost" onclick="importPack()" title="Import a .mbpack file">↓ Import</button>
+  <button class="btn btn-ghost" id="exportBtn" onclick="exportPack()" title="Export selected pack as .mbpack">↑ Export</button>
+  <button class="btn btn-primary" id="activateBtn" onclick="activateSelected()">Load Pack</button>
+</div>
+
+<div id="toast" style="
+  position:fixed; bottom:62px; left:50%;
+  transform:translateX(-50%) translateY(6px);
+  background:var(--s3); border:1px solid var(--bhi);
+  border-radius:4px; padding:8px 16px;
+  font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text);
+  opacity:0; transition:opacity 0.18s,transform 0.18s;
+  pointer-events:none; white-space:nowrap; z-index:999;
+  letter-spacing:0.3px;
+"></div>
+
+<script>
+// Placeholder packs (no audio files yet — future expansion)
+const PLACEHOLDER_PACKS = [
+  {
+    id: 'drama', name: 'Dramatic Universe', icon: '🎭', badge: 'community',
+    author: 'Community · by @loudnoise', placeholder: true,
+    desc: 'Orchestral stings, thunder claps, and cinematic drops.',
+    sounds: [
+      { key: 'Q', name: 'Thunder' }, { key: 'W', name: 'Ominous Strings' },
+      { key: 'E', name: 'Tension Drum' }, { key: 'R', name: 'Piano Drop' },
+      { key: 'T', name: 'Death Knell' }, { key: 'A', name: 'Whoosh' },
+      { key: 'S', name: 'Gasp' }, { key: 'D', name: 'Bomb Drop' },
+    ],
+  },
+  {
+    id: 'memes', name: 'Internet Vintage', icon: '🗿', badge: 'community',
+    author: 'Community · by @memevault', placeholder: true,
+    desc: 'Vine compilations, early YouTube classics.',
+    sounds: [
+      { key: 'Q', name: 'To Be Continued' }, { key: 'W', name: 'Coffin Dance' },
+      { key: 'E', name: 'Pepe Laugh' }, { key: 'R', name: 'Deal With It' },
+    ],
+  },
+];
+
+let realPacks  = [];   // loaded from packs.json
+let allPacks   = [];
+let selected   = null;
+let activePackId = 'classics';
+
+// Built-in packs ship with a fixed icon + 'official' badge. Anything new the
+// user creates inherits a sensible default.
+const BUILTIN_VISUALS = {
+  classics:  { icon: '🎬', badge: 'official', author: 'MeetingBoost · official' },
+  corporate: { icon: '💼', badge: 'official', author: 'MeetingBoost · official' },
+  hype:      { icon: '🔥', badge: 'official', author: 'MeetingBoost · official' },
+};
+
+function decoratePack(p) {
+  const visuals = BUILTIN_VISUALS[p.id] ?? {};
+  const isUser  = p.origin === 'user';
+  return {
+    ...p,
+    icon:        p.icon   ?? visuals.icon   ?? (isUser ? '🎚' : '📦'),
+    badge:       p.badge  ?? visuals.badge  ?? (isUser ? 'custom' : 'official'),
+    author:      p.author ?? visuals.author ?? (isUser ? 'You' : 'Pack'),
+    desc:        p.description || p.desc || (isUser ? 'Custom pack — drag library items onto keys.' : ''),
+  };
+}
+
+async function loadPacks() {
+  // Main process owns merging bundled + user packs and resolves each entry
+  // to an absolute file:// URL — saves the renderer from caring whether a
+  // sound came from the bundle or userData.
+  if (window.electronAPI?.getPacks) {
+    const raw = await window.electronAPI.getPacks();
+    realPacks = raw.map(decoratePack);
+  } else {
+    const resp = await fetch('packs.json?t=' + Date.now());
+    realPacks  = (await resp.json()).map(decoratePack);
+  }
+  allPacks = [...realPacks, ...PLACEHOLDER_PACKS];
+}
+
+let recordings = [];
+async function loadRecordings() {
+  recordings = (await window.electronAPI?.recordingList?.()) || [];
+}
+
+async function init() {
+  await Promise.all([loadPacks(), loadRecordings()]);
+
+  const savedId = await window.electronAPI?.getSetting('activePack', 'classics');
+  activePackId  = savedId || 'classics';
+
+  selected = allPacks.find(p => p.id === activePackId) || allPacks[0];
+  document.getElementById('footerActive').textContent =
+    allPacks.find(p => p.id === activePackId)?.name || 'Classics';
+
+  renderRecRail();
+  renderList();
+  renderPreview();
+
+  window.electronAPI?.onRecordingsChanged?.(async () => {
+    await loadRecordings();
+    renderRecRail();
+  });
+  window.electronAPI?.onPacksChanged?.(async () => {
+    await loadPacks();
+    selected = allPacks.find(p => p.id === selected?.id) || allPacks[0];
+    renderList();
+    renderPreview();
+  });
+}
+
+function badgeLabel(b) {
+  return { official: 'Official', community: 'Community', custom: 'Custom' }[b] || b;
+}
+
+function matchFilter(p, f) {
+  return !f || p.name.toLowerCase().includes(f.toLowerCase());
+}
+
+function filterPacks(val) { renderList(val); }
+
+function renderList(filter = '') {
+  const list = document.getElementById('packList');
+  list.innerHTML = '';
+
+  // Packs the app ships always live in "Official" even after the user binds
+  // something into them (which clones to user storage). Truly new user packs
+  // get a "My Packs" section; placeholder community packs go to "Community".
+  const isBuiltin = p => !!BUILTIN_VISUALS[p.id];
+  const userOwn   = allPacks.filter(p => p.origin === 'user' && !isBuiltin(p) && matchFilter(p, filter));
+  const official  = allPacks.filter(p => isBuiltin(p) && matchFilter(p, filter));
+  const community = allPacks.filter(p => p.badge === 'community' && !isBuiltin(p) && matchFilter(p, filter));
+
+  const sections = [
+    { label: 'My Packs',  items: userOwn  },
+    { label: 'Official',  items: official  },
+    { label: 'Community', items: community },
+  ];
+
+  let total = 0;
+  sections.forEach(({ label, items }) => {
+    if (!items.length) return;
+    total += items.length;
+    const lbl = document.createElement('div');
+    lbl.className = 'list-section-lbl';
+    lbl.textContent = label;
+    list.appendChild(lbl);
+
+    items.forEach(pack => {
+      const isActive   = pack.id === activePackId;
+      const isSelected = pack === selected;
+      const row = document.createElement('div');
+      row.className = 'pack-row' + (isSelected ? ' active' : '');
+      row.dataset.packId = pack.id;
+      const soundCount = pack.keys
+        ? Object.keys(pack.keys).length
+        : (pack.sounds?.length || 0);
+      row.innerHTML = `
+        <div class="pack-icon">${pack.icon}</div>
+        <div class="pack-row-info">
+          <div class="pack-row-name">${pack.name}</div>
+          <div class="pack-row-meta"><span>${soundCount} sounds</span></div>
+        </div>
+        ${isActive
+          ? '<span class="pack-badge badge-active">Active</span>'
+          : pack.placeholder
+            ? '<span class="pack-badge badge-community" style="opacity:.5">Soon</span>'
+            : `<span class="pack-badge badge-${pack.badge}">${badgeLabel(pack.badge)}</span>`
+        }
+      `;
+      row.onclick = () => selectPack(pack);
+      list.appendChild(row);
+    });
+  });
+
+  document.getElementById('listCount').textContent = total + ' pack' + (total === 1 ? '' : 's');
+}
+
+function selectPack(pack) {
+  selected = pack;
+  renderList(document.querySelector('.search-inp').value);
+  renderPreview();
+}
+
+function renderPreview() {
+  document.getElementById('previewIcon').textContent   = selected.icon;
+  document.getElementById('previewTitle').textContent  = selected.name;
+  document.getElementById('previewAuthor').textContent = selected.author || 'Official pack';
+  document.getElementById('previewDesc').textContent   = selected.desc || '';
+
+  // Count sounds
+  const soundCount = selected.keys
+    ? Object.keys(selected.keys).length
+    : (selected.sounds?.length || 0);
+  document.getElementById('previewCount').textContent = soundCount;
+
+  const isActive = selected.id === activePackId;
+  const btn = document.getElementById('activateBtn');
+  if (isActive) {
+    btn.textContent = '✓ Active Pack';
+    btn.classList.add('is-active');
+  } else if (selected.placeholder) {
+    btn.textContent = 'Coming Soon';
+    btn.classList.add('is-active');
+  } else {
+    btn.textContent = 'Load Pack';
+    btn.classList.remove('is-active');
+  }
+
+  // Export only valid for real packs with audio files
+  const exportBtn = document.getElementById('exportBtn');
+  if (exportBtn) {
+    const exportable = !selected.placeholder && soundCount > 0;
+    exportBtn.disabled = !exportable;
+    exportBtn.style.opacity     = exportable ? '' : '0.4';
+    exportBtn.style.pointerEvents = exportable ? '' : 'none';
+  }
+
+  renderSounds();
+}
+
+function renderSounds() {
+  const grid = document.getElementById('soundsGrid');
+  grid.innerHTML = '';
+
+  // Real pack: derive sounds from pack.keys object
+  if (selected.keys) {
+    const ALL_KEYS = ['q','w','e','r','t','a','s','d','f','g','z','x','c','v','b'];
+    ALL_KEYS.forEach(k => {
+      const entry = selected.keys[k];
+      const el = document.createElement('div');
+      el.dataset.key = k;
+      if (entry) {
+        const isUserBound = (selected.source === 'user' && entry.file?.startsWith?.('recordings/'));
+        el.className = 'mini-key' + (isUserBound ? ' user-bound' : '');
+        el.dataset.url = entry.url;
+        el.innerHTML = `
+          <div class="mini-letter">${k.toUpperCase()}</div>
+          <div class="mini-div"></div>
+          <div class="mini-bottom">
+            <div class="mini-name"></div>
+          </div>
+        `;
+        el.querySelector('.mini-name').textContent = entry.label;
+        el.onclick = (evt) => { fireKey(el, evt); previewSound(entry.url); };
+      } else {
+        el.className = 'mini-key empty';
+        el.innerHTML = `<div class="mini-letter">·</div>`;
+      }
+      attachDropHandlers(el, k);
+      grid.appendChild(el);
+    });
+    return;
+  }
+
+  // Placeholder pack: use mock sounds array (no drop targets — read-only)
+  (selected.sounds || []).forEach(s => {
+    const el = document.createElement('div');
+    if (!s.name) {
+      el.className = 'mini-key empty';
+      el.innerHTML = `<div class="mini-letter">·</div>`;
+    } else {
+      el.className = 'mini-key';
+      el.innerHTML = `
+        <div class="mini-letter">${s.key}</div>
+        <div class="mini-div"></div>
+        <div class="mini-bottom">
+          <div class="mini-name"></div>
+        </div>
+      `;
+      el.querySelector('.mini-name').textContent = s.name;
+    }
+    grid.appendChild(el);
+  });
+}
+
+// Single-voice preview — picking a different tile or chip stops the prior
+// preview immediately, and clicking the same source again toggles it off.
+let previewAudio = null;
+let previewUrl   = null;
+function stopPreview() {
+  if (previewAudio) {
+    try { previewAudio.pause(); }       catch {}
+    try { previewAudio.currentTime = 0; } catch {}
+  }
+  previewAudio = null;
+  previewUrl   = null;
+}
+function previewSound(url) {
+  if (previewUrl === url && previewAudio && !previewAudio.paused) {
+    stopPreview();
+    return;
+  }
+  stopPreview();
+  const audio = new Audio(url);
+  audio.volume = 0.7;
+  audio.addEventListener('ended', () => { if (previewAudio === audio) stopPreview(); });
+  audio.addEventListener('error', () => { if (previewAudio === audio) stopPreview(); });
+  audio.play().catch(() => stopPreview());
+  previewAudio = audio;
+  previewUrl   = url;
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') stopPreview();
+});
+
+// ── Recordings rail ─────────────────────────────────────────────────────
+function renderRecRail() {
+  const list = document.getElementById('recRailList');
+  if (!list) return;
+  list.innerHTML = '';
+
+  if (recordings.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'rec-chip-empty';
+    empty.textContent = 'Library is empty — record a sound or grab a YouTube clip.';
+    list.appendChild(empty);
+    return;
+  }
+
+  for (const r of recordings) {
+    const chip = document.createElement('div');
+    chip.className   = 'rec-chip';
+    chip.draggable   = true;
+    chip.dataset.id  = r.id;
+    const kindLabel = r.kind === 'youtube' ? 'YouTube clip' : 'Recording';
+    chip.title       = `${kindLabel}: ${r.name} — drag onto a key`;
+    const kindGlyph = r.kind === 'youtube' ? '▶' : '🎙';
+    chip.innerHTML   = `<span class="rec-chip-handle" aria-hidden="true">⠿</span><span class="rec-chip-kind">${kindGlyph}</span><span class="rec-chip-name"></span>`;
+    chip.querySelector('.rec-chip-name').textContent = r.name;
+
+    chip.addEventListener('dragstart', e => {
+      chip.classList.add('dragging');
+      document.body.classList.add('drag-active');
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('application/x-mb-recording',
+        JSON.stringify({ id: r.id, name: r.name, url: r.url }));
+      e.dataTransfer.setData('text/plain', r.name);
+    });
+    chip.addEventListener('dragend', () => {
+      chip.classList.remove('dragging');
+      document.body.classList.remove('drag-active');
+    });
+    chip.addEventListener('click', () => previewSound(r.url));
+
+    list.appendChild(chip);
+  }
+}
+
+// ── Drag-drop wiring on key tiles ───────────────────────────────────────
+function attachDropHandlers(tileEl, key) {
+  // Placeholder packs aren't writable — drops there make no sense.
+  if (selected?.placeholder) return;
+
+  tileEl.addEventListener('dragover', e => {
+    if (!e.dataTransfer?.types?.includes('application/x-mb-recording')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    tileEl.classList.add('drop-target');
+  });
+  tileEl.addEventListener('dragleave', () => tileEl.classList.remove('drop-target'));
+  tileEl.addEventListener('drop', async e => {
+    tileEl.classList.remove('drop-target');
+    const raw = e.dataTransfer?.getData('application/x-mb-recording');
+    if (!raw) return;
+    e.preventDefault();
+    let payload;
+    try { payload = JSON.parse(raw); } catch { return; }
+
+    const result = await window.electronAPI?.packBindSound?.({
+      packId: selected.id, key, recordingId: payload.id, label: payload.name,
+    });
+    if (!result?.ok) {
+      showToast(`Bind failed: ${result?.error || 'unknown'}`);
+      return;
+    }
+    showToast(`Bound "${payload.name}" → ${key.toUpperCase()}`);
+    // Refresh from main so we see the cloned-on-write copy + new entry.
+    await loadPacks();
+    selected = allPacks.find(p => p.id === selected.id) || selected;
+    renderPreview();
+  });
+}
+
+function fireKey(el, evt) {
+  el.classList.remove('fired', 'lit');
+  void el.offsetWidth;
+  el.classList.add('fired', 'lit');
+  setTimeout(() => el.classList.remove('lit'), 300);
+
+  const rect = el.getBoundingClientRect();
+  const cx = evt ? evt.clientX : rect.left + rect.width  / 2;
+  const cy = evt ? evt.clientY : rect.top  + rect.height / 2;
+  const r = document.createElement('div');
+  r.className = 'ripple';
+  r.style.left = cx + 'px';
+  r.style.top  = cy + 'px';
+  document.body.appendChild(r);
+  r.addEventListener('animationend', () => r.remove());
+}
+
+function activateSelected() {
+  if (!selected || selected.id === activePackId || selected.placeholder) return;
+  activePackId = selected.id;
+  document.getElementById('footerActive').textContent = selected.name;
+  window.electronAPI?.selectPack(selected.id);
+  renderList(document.querySelector('.search-inp').value);
+  renderPreview();
+}
+
+// ── Pack export / import (.mbpack) ───────────────────────────────────────
+async function exportPack() {
+  if (!selected || selected.placeholder) return;
+  showToast('Exporting…');
+  const result = await window.electronAPI?.packExport(selected.id);
+  if (!result?.ok) {
+    if (result?.error !== 'Cancelled') showToast(`Export failed: ${result?.error || 'unknown'}`);
+    return;
+  }
+  showToast(`Exported ${result.soundCount} sounds → ${result.file.split('/').pop()}`);
+}
+
+// ── New Pack flow ────────────────────────────────────────────────────────
+function openNewPackPrompt() {
+  const ov = document.getElementById('newPackOverlay');
+  const inp = document.getElementById('newPackName');
+  if (!ov || !inp) return;
+  inp.value = '';
+  ov.hidden = false;
+  setTimeout(() => inp.focus(), 0);
+}
+function closeNewPackPrompt() {
+  const ov = document.getElementById('newPackOverlay');
+  if (ov) ov.hidden = true;
+}
+async function confirmNewPack() {
+  const inp = document.getElementById('newPackName');
+  const name = inp.value.trim();
+  if (!name) { inp.focus(); return; }
+  const result = await window.electronAPI?.packCreate({ name });
+  if (!result?.ok) { showToast(`Create failed: ${result?.error || 'unknown'}`); return; }
+  closeNewPackPrompt();
+  showToast(`Created "${result.name}"`);
+
+  await loadPacks();
+  const created = allPacks.find(p => p.id === result.id);
+  if (created) selected = created;
+  renderList(document.querySelector('.search-inp').value);
+  renderPreview();
+}
+document.addEventListener('keydown', e => {
+  const ov = document.getElementById('newPackOverlay');
+  if (ov && !ov.hidden) {
+    if (e.key === 'Escape') { e.preventDefault(); closeNewPackPrompt(); }
+    if (e.key === 'Enter')  { e.preventDefault(); confirmNewPack(); }
+  }
+});
+
+async function importPack() {
+  showToast('Choosing file…');
+  const result = await window.electronAPI?.packImport();
+  if (!result?.ok) {
+    if (result?.error !== 'Cancelled') showToast(`Import failed: ${result?.error || 'unknown'}`);
+    return;
+  }
+  showToast(`Imported "${result.name}" (${result.soundCount} sounds)`);
+  await loadPacks();
+  const imported = allPacks.find(p => p.id === result.id);
+  if (imported) selected = imported;
+  renderList(document.querySelector('.search-inp').value);
+  renderPreview();
+}
+
+let toastTmr;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.style.opacity = '1';
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(toastTmr);
+  toastTmr = setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(-50%) translateY(6px)';
+  }, 2200);
+}
+
+init();
+
+// Live theme change from settings
+window.electronAPI?.onThemeChanged?.((_e, mode) => {
+  localStorage.setItem('mb-theme', mode);
+  const resolved = mode === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+    : mode;
+  document.documentElement.setAttribute('data-theme', resolved);
+});
+</script>
+</body>
+</html>

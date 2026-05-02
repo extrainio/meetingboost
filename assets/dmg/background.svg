@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 380" width="540" height="380">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"  stop-color="#1c1d2b"/>
+      <stop offset="100%" stop-color="#0f1019"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"  stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="540" height="380" fill="url(#bg)"/>
+
+  <!-- Subtle waveform decoration on either side -->
+  <g opacity="0.18" fill="url(#accent)">
+    <rect x="20"  y="170" width="3" height="40" rx="1.5"/>
+    <rect x="30"  y="160" width="3" height="60" rx="1.5"/>
+    <rect x="40"  y="150" width="3" height="80" rx="1.5"/>
+    <rect x="50"  y="140" width="3" height="100" rx="1.5"/>
+    <rect x="60"  y="150" width="3" height="80" rx="1.5"/>
+    <rect x="70"  y="160" width="3" height="60" rx="1.5"/>
+    <rect x="80"  y="170" width="3" height="40" rx="1.5"/>
+    <rect x="455" y="170" width="3" height="40" rx="1.5"/>
+    <rect x="465" y="160" width="3" height="60" rx="1.5"/>
+    <rect x="475" y="150" width="3" height="80" rx="1.5"/>
+    <rect x="485" y="140" width="3" height="100" rx="1.5"/>
+    <rect x="495" y="150" width="3" height="80" rx="1.5"/>
+    <rect x="505" y="160" width="3" height="60" rx="1.5"/>
+    <rect x="515" y="170" width="3" height="40" rx="1.5"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="270" y="56"
+        text-anchor="middle"
+        font-family="-apple-system, 'Helvetica Neue', Arial, sans-serif"
+        font-size="22" font-weight="900"
+        letter-spacing="3"
+        fill="#e4e4e8">MEETINGBOOST</text>
+
+  <text x="270" y="80"
+        text-anchor="middle"
+        font-family="ui-monospace, 'SF Mono', Menlo, monospace"
+        font-size="10"
+        letter-spacing="1.5"
+        fill="#7a7d92">Drag to Applications to install</text>
+
+  <!-- Arrow connecting the two icon positions -->
+  <g stroke="url(#accent)" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.7">
+    <line x1="200" y1="265" x2="335" y2="265"/>
+    <polyline points="325,257 340,265 325,273"/>
+  </g>
+</svg>

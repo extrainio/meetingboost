@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeetingBoost – Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      oklch(7.5% 0.006 75);
+  --s1:      oklch(10.5% 0.007 75);
+  --s2:      oklch(13.5% 0.008 75);
+  --s3:      oklch(18% 0.009 75);
+  --s4:      oklch(22% 0.010 75);
+
+  --border:  oklch(100% 0 0 / 5.5%);
+  --bhi:     oklch(100% 0 0 / 11%);
+
+  --text:    oklch(88% 0.007 78);
+  --muted:   oklch(36% 0.006 76);
+  --muted2:  oklch(52% 0.007 76);
+
+  --amber:      oklch(67% 0.17 72);
+  --amber-d:    oklch(54% 0.15 72);
+  --amber-bg:   oklch(67% 0.17 72 / 10%);
+  --amber-ring: oklch(67% 0.17 72 / 20%);
+
+  --warn:    oklch(60% 0.18 25);
+  --ok:      oklch(62% 0.14 155);
+  --nav-bg:  oklch(7.5% 0.006 75 / 82%);
+}
+
+:root[data-theme="light"] {
+  --bg:      oklch(98%   0.005 80);
+  --s1:      oklch(92.5% 0.006 78);
+  --s2:      oklch(87%   0.007 78);
+  --s3:      oklch(80%   0.008 78);
+  --s4:      oklch(72%   0.008 78);
+
+  --border:  oklch(0% 0 0 / 12%);
+  --bhi:     oklch(0% 0 0 / 22%);
+
+  --text:    oklch(13% 0.013 78);
+  --muted:   oklch(45% 0.010 76);
+  --muted2:  oklch(30% 0.010 76);
+
+  --amber-bg:   oklch(67% 0.17 72 / 14%);
+  --amber-ring: oklch(67% 0.17 72 / 26%);
+
+  --nav-bg:  oklch(98% 0.005 80 / 92%);
+}
+
+:root[data-theme="light"] body::before {
+  background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 50%, oklch(0% 0 0 / 8%) 100%);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  display: flex; flex-direction: column;
+  height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, oklch(0% 0 0 / 38%) 100%);
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+}
+
+.nav, .layout, .footer { position: relative; z-index: 2; }
+
+
+/* ── NAV ────────────────────────────────────── */
+.nav {
+  height: 52px;
+  display: flex; align-items: center;
+  padding: 0 20px; gap: 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--nav-bg);
+  backdrop-filter: blur(14px);
+  -webkit-app-region: drag;
+}
+.logo { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+.logo-mark {
+  width: 26px; height: 26px;
+  border: 1.5px solid var(--amber); border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px; font-weight: 900; color: var(--amber);
+}
+.logo-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 17px; font-weight: 900;
+  letter-spacing: 1.5px; text-transform: uppercase; color: var(--text);
+}
+.sep { width: 1px; height: 18px; background: var(--border); margin: 0 18px; flex-shrink: 0; }
+.breadcrumb {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 10px; white-space: nowrap;
+  -webkit-app-region: no-drag;
+}
+.bc-prev { color: var(--muted2); cursor: pointer; transition: color 0.12s; }
+.bc-prev:hover { color: var(--text); }
+.bc-div  { color: var(--muted); }
+.bc-cur  { color: var(--amber); font-weight: 700; }
+.nav-right { margin-left: auto; -webkit-app-region: no-drag; }
+.close-btn {
+  width: 28px; height: 28px;
+  background: var(--s1); border: 1px solid var(--border); border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: var(--muted2); cursor: pointer;
+  transition: color 0.12s, border-color 0.12s; user-select: none;
+}
+.close-btn:hover { color: var(--text); border-color: var(--bhi); }
+
+
+/* ── LAYOUT ─────────────────────────────────── */
+.layout {
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: 180px 1fr;
+}
+
+
+/* ── SIDEBAR ────────────────────────────────── */
+.sidebar {
+  border-right: 1px solid var(--border);
+  padding: 20px 12px;
+  display: flex; flex-direction: column; gap: 2px;
+  background: oklch(9% 0.006 75 / 60%);
+}
+
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 4px;
+  cursor: pointer; font-size: 11px; font-weight: 600;
+  color: var(--muted2); user-select: none;
+  transition: background 0.1s, color 0.1s;
+  position: relative;
+}
+.nav-item:hover { background: var(--s2); color: var(--text); }
+.nav-item.active { background: var(--amber-bg); color: var(--amber); }
+.nav-item.active::before {
+  content: '';
+  position: absolute; left: -12px; top: 50%;
+  transform: translateY(-50%);
+  width: 3px; height: 3px; border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 4px var(--amber);
+}
+.nav-icon { font-size: 14px; flex-shrink: 0; line-height: 1; }
+
+.sidebar-rule { height: 1px; background: var(--border); margin: 10px 2px; }
+
+.ver-badge {
+  margin-top: auto;
+  padding: 0 10px;
+  font-size: 9px; color: var(--muted); letter-spacing: 0.3px;
+  line-height: 1.6;
+}
+.ver-badge b { color: var(--muted2); font-weight: 600; }
+
+
+/* ── CONTENT ────────────────────────────────── */
+.content {
+  padding: 0;
+  display: flex; flex-direction: column;
+  overflow: hidden; min-height: 0;
+}
+
+.panel { display: none; flex-direction: column; overflow-y: auto; flex: 1; min-height: 0; }
+.panel.active { display: flex; }
+.panel::-webkit-scrollbar { width: 3px; }
+.panel::-webkit-scrollbar-thumb { background: var(--s4); border-radius: 99px; }
+
+.panel-head {
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.panel-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 20px; font-weight: 900; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--text);
+}
+.panel-sub { font-size: 9px; color: var(--muted); margin-top: 3px; }
+
+.panel-body { padding: 0 24px 24px; }
+
+.section { padding-top: 20px; }
+.section-lbl {
+  font-size: 9px; font-weight: 700; letter-spacing: 2.5px;
+  text-transform: uppercase; color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.srow {
+  display: flex; align-items: flex-start;
+  gap: 16px; padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+.srow:last-child { border-bottom: none; }
+
+.srow-info { flex: 1; min-width: 0; padding-top: 1px; }
+.srow-label {
+  font-size: 11px; font-weight: 700; color: var(--text); letter-spacing: 0.2px;
+}
+.srow-hint {
+  font-size: 9px; color: var(--muted); margin-top: 3px; line-height: 1.5;
+  max-width: 38ch;
+}
+
+.srow-ctrl {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 8px;
+}
+
+
+/* ── TOGGLE ──────────────────────────────────── */
+.toggle {
+  width: 34px; height: 18px;
+  background: var(--s3); border-radius: 99px;
+  position: relative; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 12px; height: 12px;
+  background: var(--muted2); border-radius: 50%;
+  top: 2px; left: 2px;
+  transition: transform 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.toggle.on {
+  background: var(--amber-bg);
+  border-color: var(--amber-d);
+}
+.toggle.on::after {
+  transform: translateX(16px);
+  background: var(--amber);
+  box-shadow: 0 0 6px oklch(67% 0.17 72 / 40%);
+}
+
+.toggle-label {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--muted);
+  min-width: 18px; text-align: right;
+  transition: color 0.15s;
+}
+.toggle.on ~ .toggle-label { color: var(--amber); }
+
+
+/* ── SELECT ──────────────────────────────────── */
+.sel-wrap { position: relative; }
+.sel-inp {
+  background: var(--s1); border: 1px solid var(--border); border-radius: 4px;
+  padding: 7px 28px 7px 10px;
+  color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  outline: none; cursor: pointer; -webkit-appearance: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+  min-width: 160px;
+}
+.sel-inp:focus { border-color: var(--amber-d); box-shadow: 0 0 0 3px var(--amber-ring); }
+.sel-arrow {
+  position: absolute; right: 9px; top: 50%;
+  transform: translateY(-50%); pointer-events: none;
+  font-size: 9px; color: var(--muted2);
+}
+
+
+/* ── RANGE ───────────────────────────────────── */
+.range-wrap { display: flex; align-items: center; gap: 8px; }
+.range-val { font-size: 11px; color: var(--amber); font-weight: 700; min-width: 26px; text-align: right; }
+input[type=range] {
+  -webkit-appearance: none;
+  width: 110px; height: 2px;
+  background: var(--muted); border-radius: 2px;
+  cursor: pointer; outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px; height: 10px;
+  background: var(--amber); border-radius: 50%;
+  transition: box-shadow 0.12s;
+}
+input[type=range]::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 0 3px var(--amber-ring);
+}
+
+
+/* ── STATUS CHIP ────────────────────────────── */
+.status-chip {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+  text-transform: uppercase; padding: 4px 8px; border-radius: 3px;
+}
+.status-chip.ok   { background: oklch(62% 0.14 155 / 12%); color: var(--ok);   border: 1px solid oklch(62% 0.14 155 / 25%); }
+.status-chip.warn { background: oklch(60% 0.18 25 / 12%);  color: var(--warn); border: 1px solid oklch(60% 0.18 25 / 25%); }
+.status-pip {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: currentColor; flex-shrink: 0;
+}
+
+
+/* ── KEY CAPTURE ────────────────────────────── */
+.key-capture {
+  display: flex; align-items: center; gap: 6px;
+}
+.key-chip {
+  background: var(--s2); border: 1px solid var(--border);
+  border-bottom: 2px solid var(--muted);
+  border-radius: 3px; padding: 4px 10px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px; font-weight: 900; color: var(--muted2);
+  letter-spacing: 0.5px; white-space: nowrap;
+}
+.key-chip.amber { border-color: var(--amber-d); border-bottom-color: var(--amber); color: var(--amber); background: var(--amber-bg); }
+.key-plus { font-size: 10px; color: var(--muted); }
+
+.btn-sm {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+  text-transform: uppercase; padding: 5px 10px; border-radius: 3px;
+  cursor: pointer; border: none;
+  transition: transform 0.08s, box-shadow 0.12s;
+  white-space: nowrap;
+}
+.btn-sm:hover { transform: translateY(-1px); }
+.btn-sm:active { transform: scale(0.97); }
+.btn-sm-ghost {
+  background: var(--s1); border: 1px solid var(--border); color: var(--muted2);
+}
+.btn-sm-ghost:hover { border-color: var(--bhi); color: var(--text); }
+.btn-sm-amber {
+  background: var(--amber); color: oklch(10% 0.01 75); font-weight: 900;
+}
+.btn-sm-amber:hover { box-shadow: 0 0 14px var(--amber-ring); }
+.btn-sm-warn {
+  background: oklch(60% 0.18 25 / 14%); border: 1px solid oklch(60% 0.18 25 / 28%);
+  color: var(--warn);
+}
+.btn-sm-warn:hover { background: oklch(60% 0.18 25 / 22%); }
+
+
+/* ── OPACITY PREVIEW ────────────────────────── */
+.opacity-preview {
+  width: 26px; height: 26px; border-radius: 3px;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--s2) 50%, oklch(100% 0 0 / 6%) 50%);
+  position: relative; overflow: hidden; flex-shrink: 0;
+}
+.opacity-fill {
+  position: absolute; inset: 0;
+  background: var(--s2);
+  transition: opacity 0.1s;
+}
+
+
+/* ── ABOUT SECTION ──────────────────────────── */
+.about-mark {
+  width: 52px; height: 52px;
+  border: 2px solid var(--amber); border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 22px; font-weight: 900; color: var(--amber);
+  flex-shrink: 0;
+}
+.about-block { flex: 1; }
+.about-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 22px; font-weight: 900; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text);
+}
+.about-tagline { font-size: 9px; color: var(--muted); margin-top: 3px; }
+
+.about-row {
+  display: flex; align-items: center; gap: 16px;
+  padding: 20px 0;
+}
+
+.meta-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: 4px; overflow: hidden;
+}
+.meta-cell {
+  padding: 12px 14px;
+  background: var(--s1);
+  display: flex; flex-direction: column; gap: 3px;
+}
+.meta-key { font-size: 9px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; font-weight: 700; }
+.meta-val { font-size: 12px; color: var(--text); font-weight: 700; }
+
+
+/* ── FOOTER ─────────────────────────────────── */
+.footer {
+  height: 52px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 20px;
+  border-top: 1px solid var(--border); flex-shrink: 0;
+  background: oklch(7.5% 0.006 75 / 82%);
+  backdrop-filter: blur(14px);
+}
+.footer-note { font-size: 9px; color: var(--muted); }
+.spacer { flex: 1; }
+.btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+  border: none; border-radius: 3px;
+  padding: 7px 14px; cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  text-transform: uppercase; white-space: nowrap;
+  transition: transform 0.08s, box-shadow 0.12s;
+}
+.btn:hover  { transform: translateY(-1px); }
+.btn:active { transform: scale(0.97); }
+.btn-ghost {
+  background: var(--s1); border: 1px solid var(--border); color: var(--muted2);
+}
+.btn-ghost:hover { border-color: var(--bhi); color: var(--text); }
+.btn-primary {
+  background: var(--amber); color: oklch(10% 0.01 75);
+  font-weight: 900; letter-spacing: 0.8px;
+}
+.btn-primary:hover { box-shadow: 0 0 20px var(--amber-ring); }
+
+/* ── THEME PICKER ──────────────────────────── */
+.theme-picker { display: flex; gap: 8px; }
+.theme-opt {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 9px 12px 7px;
+  background: var(--s1); border: 1px solid var(--border); border-radius: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--muted2); cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  -webkit-app-region: no-drag;
+}
+.theme-opt:hover { border-color: var(--bhi); color: var(--text); }
+.theme-opt[aria-pressed="true"] {
+  border-color: var(--amber); color: var(--amber);
+  background: var(--amber-bg);
+}
+.theme-swatch {
+  width: 38px; height: 26px;
+  border-radius: 3px; border: 1px solid var(--border);
+  position: relative; overflow: hidden;
+}
+.theme-swatch--dark   { background: oklch(7.5% 0.006 75); }
+.theme-swatch--dark::after {
+  content: ''; position: absolute; left: 5px; top: 5px;
+  width: 14px; height: 4px; border-radius: 1px;
+  background: oklch(67% 0.17 72);
+}
+.theme-swatch--light  { background: oklch(97.5% 0.006 78); }
+.theme-swatch--light::after {
+  content: ''; position: absolute; left: 5px; top: 5px;
+  width: 14px; height: 4px; border-radius: 1px;
+  background: oklch(67% 0.17 72);
+}
+.theme-swatch--system {
+  background: linear-gradient(90deg,
+    oklch(7.5% 0.006 75)   0%, oklch(7.5% 0.006 75)   50%,
+    oklch(97.5% 0.006 78) 50%, oklch(97.5% 0.006 78) 100%);
+}
+.theme-swatch--system::after {
+  content: ''; position: absolute; left: 5px; top: 5px;
+  width: 14px; height: 4px; border-radius: 1px;
+  background: oklch(67% 0.17 72);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggle, .toggle::after { transition: none; }
+  .btn:hover, .btn-sm:hover { transform: none; }
+}
+</style>
+<script>(function(){var t=localStorage.getItem('mb-theme')||'dark';document.documentElement.setAttribute('data-theme',t==='system'?(window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):t);})()</script>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="logo">
+    <div class="logo-mark">MB</div>
+    <div class="logo-name">MeetingBoost</div>
+  </div>
+  <div class="sep"></div>
+  <div class="breadcrumb">
+    <span class="bc-prev" onclick="window.electronAPI?.openBoard()">Board</span>
+    <span class="bc-div">/</span>
+    <span class="bc-cur">Settings</span>
+  </div>
+  <div class="nav-right">
+    <div class="close-btn" title="Back to Board" onclick="window.electronAPI?.closeWindow()">✕</div>
+  </div>
+</nav>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR NAV -->
+  <aside class="sidebar">
+    <div class="nav-item active" onclick="showPanel('audio', this)">
+      <div class="nav-icon">◎</div> Audio
+    </div>
+    <div class="nav-item" onclick="showPanel('keyboard', this)">
+      <div class="nav-icon">⌨</div> Keyboard
+    </div>
+    <div class="nav-item" onclick="showPanel('appearance', this)">
+      <div class="nav-icon">◑</div> Appearance
+    </div>
+    <div class="nav-item" onclick="showPanel('window', this)">
+      <div class="nav-icon">▣</div> Window
+    </div>
+    <div class="sidebar-rule"></div>
+    <div class="nav-item" onclick="showPanel('about', this)">
+      <div class="nav-icon">◈</div> About
+    </div>
+    <div class="ver-badge">
+      v1.0.0-beta<br>
+      <b>macOS 14.4+</b>
+    </div>
+  </aside>
+
+  <!-- PANELS -->
+  <div class="content">
+
+    <!-- AUDIO -->
+    <div class="panel active" id="panel-audio">
+      <div class="panel-head">
+        <div class="panel-title">Audio</div>
+        <div class="panel-sub">Output routing and volume defaults</div>
+      </div>
+      <div class="panel-body">
+
+        <div class="section">
+          <div class="section-lbl">Output Device</div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Virtual Output</div>
+              <div class="srow-hint">Route sounds to this device. Use BlackHole 2ch to inject into meeting audio.</div>
+            </div>
+            <div class="srow-ctrl" style="flex-direction:column; align-items:flex-end; gap:6px;">
+              <div class="sel-wrap">
+                <select class="sel-inp" id="outputDeviceSelect" onchange="handleOutputDevice(this.value)">
+                  <option>BlackHole 2ch</option>
+                  <option>MacBook Pro Speakers</option>
+                  <option>External Headphones</option>
+                  <option>Soundflower (2ch)</option>
+                </select>
+                <div class="sel-arrow">▾</div>
+              </div>
+              <div class="status-chip ok">
+                <div class="status-pip"></div>
+                Driver active
+              </div>
+            </div>
+          </div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Monitor Output</div>
+              <div class="srow-hint">Also play sounds here so you can hear your own triggers.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="toggle on" data-setting="monitorOutput" onclick="handleToggle(this)"></div>
+              <div class="toggle-label">ON</div>
+            </div>
+          </div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Monitor Device</div>
+              <div class="srow-hint">Where monitor audio plays when enabled.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="sel-wrap">
+                <select class="sel-inp" style="min-width:140px;">
+                  <option>MacBook Pro Speakers</option>
+                  <option>External Headphones</option>
+                  <option>AirPods Pro</option>
+                </select>
+                <div class="sel-arrow">▾</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-lbl">Volume</div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Default Volume</div>
+              <div class="srow-hint">Starting level when the app launches.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="range-wrap">
+                <input type="range" id="volumeRange" min="0" max="100" value="80"
+                  oninput="handleVolumeRange(this)">
+                <div class="range-val" id="volumeVal">80</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Remember Last Volume</div>
+              <div class="srow-hint">Restore the volume you had when the app was last closed.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="toggle" data-setting="rememberVolume" onclick="handleToggle(this)"></div>
+              <div class="toggle-label">OFF</div>
+            </div>
+          </div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Test Output</div>
+              <div class="srow-hint">Play a short tone to confirm your routing is working.</div>
+            </div>
+            <div class="srow-ctrl">
+              <button class="btn-sm btn-sm-ghost" onclick="playTestTone(this)">▶ Play Test Tone</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- KEYBOARD -->
+    <div class="panel" id="panel-keyboard">
+      <div class="panel-head">
+        <div class="panel-title">Keyboard</div>
+        <div class="panel-sub">Global shortcuts and trigger behaviour</div>
+      </div>
+      <div class="panel-body">
+
+        <div class="section">
+          <div class="section-lbl">Global Shortcut</div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Show / Hide Window</div>
+              <div class="srow-hint">Works even when MeetingBoost is in the background.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="key-capture">
+                <div class="key-chip amber">⌥</div>
+                <div class="key-plus">+</div>
+                <div class="key-chip amber">⇧</div>
+                <div class="key-plus">+</div>
+                <div class="key-chip amber">M</div>
+                <button class="btn-sm btn-sm-ghost" style="margin-left:4px;" onclick="showToast('Press new shortcut...')">Edit</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Global Keyboard Capture</div>
+              <div class="srow-hint">Fire sounds from any app, not just when MeetingBoost is focused. Requires Accessibility permission.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="toggle on" data-setting="globalCapture" onclick="handleToggle(this)"></div>
+              <div class="toggle-label">ON</div>
+            </div>
+          </div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Accessibility Permission</div>
+              <div class="srow-hint">Required for global capture. Grant in System Settings → Privacy & Security → Accessibility.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="status-chip ok" data-status="accessibility" style="margin-right:8px;">
+                <div class="status-pip"></div>
+                <span class="label">Checking…</span>
+              </div>
+              <button class="btn-sm btn-sm-ghost" onclick="requestAccessibility()">Request</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-lbl">Trigger Behaviour</div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Fire on Keydown</div>
+              <div class="srow-hint">Sounds trigger on press, not release. Reduces latency by ~60–80ms.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="toggle on" data-setting="fireOnKeydown" onclick="handleToggle(this)"></div>
+              <div class="toggle-label">ON</div>
+            </div>
+          </div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Suppress Key Repeat</div>
+              <div class="srow-hint">Ignore repeated keydown events while a key is held. Prevents accidental spamming.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="toggle on" data-setting="suppressRepeat" onclick="handleToggle(this)"></div>
+              <div class="toggle-label">ON</div>
+            </div>
+          </div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Disable During Text Input</div>
+              <div class="srow-hint">Suspend key routing when a text field is focused in any app.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="toggle on" data-setting="disableInText" onclick="handleToggle(this)"></div>
+              <div class="toggle-label">ON</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- APPEARANCE -->
+    <div class="panel" id="panel-appearance">
+      <div class="panel-head">
+        <div class="panel-title">Appearance</div>
+        <div class="panel-sub">Theme and visual preferences</div>
+      </div>
+      <div class="panel-body">
+
+        <div class="section">
+          <div class="section-lbl">Theme</div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Color Scheme</div>
+              <div class="srow-hint">Match macOS appearance, or pick a fixed mode.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="theme-picker" role="radiogroup" aria-label="Color scheme">
+                <button class="theme-opt" data-theme="dark"   onclick="setTheme('dark', this)" aria-pressed="false">
+                  <div class="theme-swatch theme-swatch--dark"></div>
+                  <span>Dark</span>
+                </button>
+                <button class="theme-opt" data-theme="light"  onclick="setTheme('light', this)" aria-pressed="false">
+                  <div class="theme-swatch theme-swatch--light"></div>
+                  <span>Light</span>
+                </button>
+                <button class="theme-opt" data-theme="system" onclick="setTheme('system', this)" aria-pressed="false">
+                  <div class="theme-swatch theme-swatch--system"></div>
+                  <span>System</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Reduce Motion</div>
+              <div class="srow-hint">Disable non-essential animations and transitions.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="toggle" data-setting="reduceMotion" onclick="handleToggle(this)"></div>
+              <div class="toggle-label">OFF</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- WINDOW -->
+    <div class="panel" id="panel-window">
+      <div class="panel-head">
+        <div class="panel-title">Window</div>
+        <div class="panel-sub">Positioning and launch behaviour</div>
+      </div>
+      <div class="panel-body">
+
+        <div class="section">
+          <div class="section-lbl">Display</div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Always on Top</div>
+              <div class="srow-hint">Keep MeetingBoost above all other windows, including full-screen video calls.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="toggle on" data-setting="alwaysOnTop" onclick="handleToggle(this)"></div>
+              <div class="toggle-label">ON</div>
+            </div>
+          </div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Window Opacity</div>
+              <div class="srow-hint">Reduce opacity so the window doesn't obstruct video behind it.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="range-wrap">
+                <div class="opacity-preview">
+                  <div class="opacity-fill" id="opacityFill" style="opacity:0.95;"></div>
+                </div>
+                <input type="range" min="30" max="100" value="95" style="width:90px;"
+                  oninput="updateOpacity(this.value)">
+                <div class="range-val" id="opacityVal">95%</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Show in Menu Bar</div>
+              <div class="srow-hint">Display a menu bar icon for quick access when the window is hidden.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="toggle on" data-setting="showMenuBar" onclick="handleToggle(this)"></div>
+              <div class="toggle-label">ON</div>
+            </div>
+          </div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Hide on Close</div>
+              <div class="srow-hint">Closing the window hides it instead of quitting. Use ⌘Q to fully quit.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="toggle on" data-setting="hideOnClose" onclick="handleToggle(this)"></div>
+              <div class="toggle-label">ON</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-lbl">Startup</div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Launch at Login</div>
+              <div class="srow-hint">Start MeetingBoost automatically when you log in to macOS.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="toggle" data-setting="launchAtLogin" onclick="handleToggle(this)"></div>
+              <div class="toggle-label">OFF</div>
+            </div>
+          </div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Start Hidden</div>
+              <div class="srow-hint">Launch to menu bar only. Show the window with the global shortcut.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="toggle" data-setting="startHidden" onclick="handleToggle(this)"></div>
+              <div class="toggle-label">OFF</div>
+            </div>
+          </div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Remember Window Position</div>
+              <div class="srow-hint">Restore the window to where you left it on the last screen it was on.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="toggle on" data-setting="rememberPosition" onclick="handleToggle(this)"></div>
+              <div class="toggle-label">ON</div>
+            </div>
+          </div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Reset Window Position</div>
+            </div>
+            <div class="srow-ctrl">
+              <button class="btn-sm btn-sm-ghost" onclick="showToast('Window moved to default position')">Reset to Default</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ABOUT -->
+    <div class="panel" id="panel-about">
+      <div class="panel-head">
+        <div class="panel-title">About</div>
+        <div class="panel-sub">Version, updates, and data</div>
+      </div>
+      <div class="panel-body">
+
+        <div class="section">
+          <div class="about-row">
+            <div class="about-mark">MB</div>
+            <div class="about-block">
+              <div class="about-name">MeetingBoost</div>
+              <div class="about-tagline" id="aboutTagline">Keyboard-driven soundboard for macOS</div>
+            </div>
+          </div>
+
+          <div class="meta-grid">
+            <div class="meta-cell">
+              <div class="meta-key">Version</div>
+              <div class="meta-val" id="metaVersion">—</div>
+            </div>
+            <div class="meta-cell">
+              <div class="meta-key">Platform</div>
+              <div class="meta-val">macOS 14.4</div>
+            </div>
+            <div class="meta-cell">
+              <div class="meta-key">Electron</div>
+              <div class="meta-val">32.x</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-lbl">Updates</div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Automatic Updates</div>
+              <div class="srow-hint">Download and install updates in the background.</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="toggle on" data-setting="autoUpdate" onclick="handleToggle(this)"></div>
+              <div class="toggle-label">ON</div>
+            </div>
+          </div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Check for Updates</div>
+              <div class="srow-hint">Last checked: today</div>
+            </div>
+            <div class="srow-ctrl">
+              <div class="status-chip ok" style="margin-right:8px;">
+                <div class="status-pip"></div>
+                Up to date
+              </div>
+              <button class="btn-sm btn-sm-ghost" onclick="showToast('Checking for updates...')">Check Now</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-lbl">Data</div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Export Settings</div>
+              <div class="srow-hint">Save your preferences (theme, hotkeys, audio device) to a JSON file. Custom sounds and packs are exported separately as <code>.mbpack</code> archives.</div>
+            </div>
+            <div class="srow-ctrl">
+              <button class="btn-sm btn-sm-ghost" onclick="exportSettings()">Export</button>
+            </div>
+          </div>
+
+          <div class="srow">
+            <div class="srow-info">
+              <div class="srow-label">Reset All Settings</div>
+              <div class="srow-hint">Restore all defaults. Your custom sounds and packs are not affected.</div>
+            </div>
+            <div class="srow-ctrl">
+              <button class="btn-sm btn-sm-warn" onclick="resetSettings()">Reset Defaults</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="footer-note" id="footerNote">All changes saved automatically</div>
+  <div class="spacer"></div>
+  <button class="btn btn-ghost" onclick="window.electronAPI?.closeWindow()">Close</button>
+</div>
+
+<div id="toast" style="
+  position:fixed; bottom:62px; left:50%;
+  transform:translateX(-50%) translateY(6px);
+  background:oklch(18% 0.009 75); border:1px solid oklch(100% 0 0 / 11%);
+  border-radius:4px; padding:6px 14px;
+  font-family:'IBM Plex Mono',monospace; font-size:10px; color:oklch(88% 0.007 78);
+  opacity:0; transition:opacity 0.18s,transform 0.18s;
+  pointer-events:none; white-space:nowrap; z-index:999;
+"></div>
+
+<script>
+  function showPanel(id, el) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('panel-' + id).classList.add('active');
+    el.classList.add('active');
+  }
+
+  function handleToggle(el) {
+    const isOn = el.classList.toggle('on');
+    const label = el.nextElementSibling;
+    if (label && label.classList.contains('toggle-label')) {
+      label.textContent = isOn ? 'ON' : 'OFF';
+    }
+    const key = el.dataset.setting;
+    if (key) {
+      window.electronAPI?.saveSetting(key, isOn);
+    }
+    markUnsaved();
+  }
+
+  function handleVolumeRange(el) {
+    const v = +el.value;
+    document.getElementById('volumeVal').textContent = v;
+    window.electronAPI?.saveSetting('volume', v);
+    markUnsaved();
+  }
+
+  function handleOutputDevice(deviceId) {
+    window.electronAPI?.saveSetting('outputDeviceId', deviceId);
+    markUnsaved();
+  }
+
+  // Enumerate real audio output devices and populate the select.
+  // Browsers gate device labels behind microphone permission, so we briefly
+  // request the mic to unlock readable names. Devices are still listed if
+  // permission is denied, just without labels.
+  async function loadOutputDevices() {
+    const select = document.getElementById('outputDeviceSelect');
+    if (!select) return;
+
+    let labelsUnlocked = false;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop());
+      labelsUnlocked = true;
+    } catch { /* mic denied — labels may be empty */ }
+
+    let devices = [];
+    try { devices = await navigator.mediaDevices.enumerateDevices(); }
+    catch { return; }
+
+    const outputs = devices.filter(d => d.kind === 'audiooutput');
+    const currentId = await window.electronAPI?.getSetting('outputDeviceId', 'default');
+
+    select.innerHTML = '';
+    const sysOpt = document.createElement('option');
+    sysOpt.value = 'default';
+    sysOpt.textContent = 'System default';
+    select.appendChild(sysOpt);
+
+    outputs.forEach((d, i) => {
+      if (d.deviceId === 'default' || d.deviceId === '') return;
+      const opt = document.createElement('option');
+      opt.value = d.deviceId;
+      opt.textContent = d.label || `Output ${i + 1}`;
+      if (d.label?.toLowerCase().includes('blackhole')) {
+        opt.textContent = `${opt.textContent}  (recommended for meeting injection)`;
+      }
+      select.appendChild(opt);
+    });
+
+    // Restore selection
+    select.value = outputs.some(d => d.deviceId === currentId) ? currentId : 'default';
+
+    if (!labelsUnlocked) {
+      const hint = document.createElement('option');
+      hint.disabled = true;
+      hint.textContent = '— grant mic permission to see device names';
+      select.appendChild(hint);
+    }
+  }
+
+  function applyThemeAttr(mode) {
+    const resolved = mode === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+      : mode;
+    document.documentElement.setAttribute('data-theme', resolved);
+  }
+
+  function setTheme(mode, btn) {
+    localStorage.setItem('mb-theme', mode);
+    window.electronAPI?.saveSetting('theme', mode);
+    applyThemeAttr(mode);
+    document.querySelectorAll('.theme-opt').forEach(b => {
+      b.setAttribute('aria-pressed', String(b.dataset.theme === mode));
+    });
+    markUnsaved();
+  }
+
+  // Re-resolve "system" choice when the OS scheme changes
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+    if ((localStorage.getItem('mb-theme') || 'dark') === 'system') applyThemeAttr('system');
+  });
+
+  function updateOpacity(val) {
+    document.getElementById('opacityFill').style.opacity = val / 100;
+    document.getElementById('opacityVal').textContent = val + '%';
+    window.electronAPI?.saveSetting('windowOpacity', +val);
+    markUnsaved();
+  }
+
+  function playTestTone(btn) {
+    btn.textContent = '♪ Playing...';
+    try {
+      const ac  = new AudioContext();
+      const osc = ac.createOscillator();
+      const env = ac.createGain();
+      osc.connect(env);
+      env.connect(ac.destination);
+      osc.type = 'sine';
+      osc.frequency.value = 440;
+      env.gain.setValueAtTime(0.2, ac.currentTime);
+      env.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.8);
+      osc.start();
+      osc.stop(ac.currentTime + 0.8);
+      osc.addEventListener('ended', () => ac.close());
+    } catch {}
+    setTimeout(() => { btn.textContent = '▶ Play Test Tone'; }, 1400);
+  }
+
+  let unsavedTimer;
+  function markUnsaved() {
+    const note = document.getElementById('footerNote');
+    note.textContent = 'Saved';
+    clearTimeout(unsavedTimer);
+    unsavedTimer = setTimeout(() => {
+      note.textContent = 'All changes saved automatically';
+    }, 1500);
+  }
+
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.opacity = '1';
+    t.style.transform = 'translateX(-50%) translateY(0)';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      t.style.opacity = '0';
+      t.style.transform = 'translateX(-50%) translateY(6px)';
+    }, 1900);
+  }
+
+  // Restore settings on load
+  window.addEventListener('DOMContentLoaded', async () => {
+    const settings = await window.electronAPI?.getAllSettings();
+    if (!settings) return;
+
+    document.querySelectorAll('[data-setting]').forEach(el => {
+      const key = el.dataset.setting;
+      if (key in settings && typeof settings[key] === 'boolean') {
+        const isOn = settings[key];
+        el.classList.toggle('on', isOn);
+        const label = el.nextElementSibling;
+        if (label && label.classList.contains('toggle-label')) {
+          label.textContent = isOn ? 'ON' : 'OFF';
+        }
+      }
+    });
+
+    if (typeof settings.volume === 'number') {
+      document.getElementById('volumeRange').value = settings.volume;
+      document.getElementById('volumeVal').textContent = settings.volume;
+    }
+
+    // Window opacity slider
+    if (typeof settings.windowOpacity === 'number') {
+      const r = document.querySelector('input[type=range][oninput*="updateOpacity"]');
+      if (r) {
+        r.value = settings.windowOpacity;
+        document.getElementById('opacityVal').textContent = settings.windowOpacity + '%';
+        document.getElementById('opacityFill').style.opacity = settings.windowOpacity / 100;
+      }
+    }
+
+    // Theme: prefer Electron-stored value, fall back to localStorage cache
+    const mode = (settings.theme) || localStorage.getItem('mb-theme') || 'dark';
+    localStorage.setItem('mb-theme', mode);
+    applyThemeAttr(mode);
+    document.querySelectorAll('.theme-opt').forEach(b => {
+      b.setAttribute('aria-pressed', String(b.dataset.theme === mode));
+    });
+
+    // Version sync — single source of truth is package.json
+    try {
+      const v = await window.electronAPI?.appVersion?.();
+      if (v) {
+        document.getElementById('metaVersion').textContent = v;
+        document.getElementById('aboutTagline').textContent =
+          `Keyboard-driven soundboard for macOS · v${v}`;
+      }
+    } catch {}
+
+    // Real audio output devices
+    loadOutputDevices();
+
+    // Accessibility-permission status (drives the chip in the Keyboard panel)
+    refreshAccessibilityChip();
+  });
+
+  async function refreshAccessibilityChip() {
+    const chip = document.querySelector('[data-status="accessibility"]');
+    if (!chip) return;
+    let granted = true;
+    try { granted = !!(await window.electronAPI?.checkAccessibility?.()); } catch {}
+    chip.classList.toggle('ok',   granted);
+    chip.classList.toggle('warn', !granted);
+    chip.querySelector('.label').textContent = granted ? 'Granted' : 'Required';
+  }
+
+  async function requestAccessibility() {
+    await window.electronAPI?.requestAccessibility?.();
+    showToast('Open System Settings → Privacy & Security → Accessibility, enable MeetingBoost, then restart the app.');
+    setTimeout(refreshAccessibilityChip, 500);
+  }
+
+  async function exportSettings() {
+    const res = await window.electronAPI?.settingsExport?.();
+    if (res?.canceled) return;
+    if (res?.ok) showToast('Settings exported');
+    else showToast(res?.error ? `Export failed: ${res.error}` : 'Export failed');
+  }
+
+  async function resetSettings() {
+    if (!confirm('Reset all settings to defaults? Your custom sounds and packs are NOT affected.')) return;
+    await window.electronAPI?.settingsReset?.();
+    showToast('Settings reset — reload to fully refresh this window');
+    // Reload after a beat so the toast is visible.
+    setTimeout(() => location.reload(), 800);
+  }
+</script>
+</body>
+</html>

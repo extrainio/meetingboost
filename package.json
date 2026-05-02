@@ -1,0 +1,102 @@
+{
+  "name": "meetingboost",
+  "version": "1.0.0-beta",
+  "productName": "MeetingBoost",
+  "description": "Keyboard-driven soundboard for macOS meetings",
+  "author": {
+    "name": "MeetingBoost",
+    "email": "hi@meetingboost.app"
+  },
+  "main": "main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsc && electron .",
+    "dev": "tsc && ELECTRON_IS_DEV=1 electron .",
+    "dist": "tsc && electron-builder --mac",
+    "dist:dmg": "tsc && electron-builder --mac dmg",
+    "dist:dir": "tsc && electron-builder --mac dir",
+    "test": "python3 -m pytest tests/test_sounds.py -v",
+    "test:e2e": "tsc && npx playwright test"
+  },
+  "build": {
+    "appId": "com.meetingboost.app",
+    "productName": "MeetingBoost",
+    "copyright": "Copyright © 2026 MeetingBoost",
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/ffmpeg",
+      "node_modules/ffmpeg-static/index.js",
+      "node_modules/ffmpeg-static/package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "assets/entitlements.mac.plist",
+      "entitlementsInherit": "assets/entitlements.mac.plist",
+      "minimumSystemVersion": "13.0"
+    },
+    "dmg": {
+      "title": "MeetingBoost",
+      "background": "assets/dmg/background.png",
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 130,
+          "y": 220,
+          "type": "file"
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "assets/trayTemplate*.png",
+      "package.json",
+      "node_modules/ffmpeg-static/**",
+      "!**/*.ts",
+      "!**/*.map",
+      "!tsconfig.json"
+    ],
+    "directories": {
+      "output": "release"
+    }
+  },
+  "devDependencies": {
+    "@electron/asar": "^4.2.0",
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^20.0.0",
+    "electron": "^32.0.0",
+    "electron-builder": "^25.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.3.0",
+    "node-global-key-listener": "^0.3.0"
+  }
+}

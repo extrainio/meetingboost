@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Waveform glyph, pure black on transparent (macOS template image) -->
+  <!-- 7 bars centered, mirroring the app icon waveform -->
+  <g fill="#000">
+    <rect x="3"  y="13" width="2.5" height="6"  rx="1"/>
+    <rect x="7"  y="11" width="2.5" height="10" rx="1"/>
+    <rect x="11" y="9"  width="2.5" height="14" rx="1"/>
+    <rect x="15" y="7"  width="2.5" height="18" rx="1"/>
+    <rect x="19" y="9"  width="2.5" height="14" rx="1"/>
+    <rect x="23" y="11" width="2.5" height="10" rx="1"/>
+    <rect x="27" y="13" width="2.5" height="6"  rx="1"/>
+  </g>
+</svg>

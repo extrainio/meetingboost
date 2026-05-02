@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeetingBoost – Add Sound</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      oklch(7.5% 0.006 75);
+  --s1:      oklch(10.5% 0.007 75);
+  --s2:      oklch(13.5% 0.008 75);
+  --s3:      oklch(18% 0.009 75);
+  --s4:      oklch(22% 0.010 75);
+
+  --border:  oklch(100% 0 0 / 5.5%);
+  --bhi:     oklch(100% 0 0 / 11%);
+
+  --text:    oklch(88% 0.007 78);
+  --muted:   oklch(36% 0.006 76);
+  --muted2:  oklch(52% 0.007 76);
+
+  --amber:      oklch(67% 0.17 72);
+  --amber-d:    oklch(54% 0.15 72);
+  --amber-bg:   oklch(67% 0.17 72 / 10%);
+  --amber-ring: oklch(67% 0.17 72 / 20%);
+
+  --warn:    oklch(60% 0.18 25);
+  --nav-bg:  oklch(7.5% 0.006 75 / 82%);
+}
+
+:root[data-theme="light"] {
+  --bg:      oklch(98%   0.005 80);
+  --s1:      oklch(92.5% 0.006 78);
+  --s2:      oklch(87%   0.007 78);
+  --s3:      oklch(80%   0.008 78);
+  --s4:      oklch(72%   0.008 78);
+
+  --border:  oklch(0% 0 0 / 12%);
+  --bhi:     oklch(0% 0 0 / 22%);
+
+  --text:    oklch(13% 0.013 78);
+  --muted:   oklch(45% 0.010 76);
+  --muted2:  oklch(30% 0.010 76);
+
+  --amber-bg:   oklch(67% 0.17 72 / 14%);
+  --amber-ring: oklch(67% 0.17 72 / 26%);
+
+  --nav-bg:  oklch(98% 0.005 80 / 92%);
+}
+
+:root[data-theme="light"] .sidebar { background: oklch(94% 0.006 78 / 70%); }
+:root[data-theme="light"] body::before {
+  background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 50%, oklch(0% 0 0 / 8%) 100%);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  display: flex; flex-direction: column;
+  height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, oklch(0% 0 0 / 38%) 100%);
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+}
+
+.nav, .layout, .footer { position: relative; z-index: 2; }
+
+
+/* ── NAV ──────────────────────────────────────── */
+.nav {
+  height: 52px;
+  display: flex; align-items: center;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--nav-bg);
+  backdrop-filter: blur(14px);
+  gap: 0;
+  -webkit-app-region: drag;
+}
+
+.logo { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+.logo-mark {
+  width: 26px; height: 26px;
+  border: 1.5px solid var(--amber); border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px; font-weight: 900; color: var(--amber);
+}
+.logo-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 17px; font-weight: 900;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text);
+}
+
+.sep { width: 1px; height: 18px; background: var(--border); margin: 0 18px; flex-shrink: 0; }
+
+.breadcrumb {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 10px; letter-spacing: 0.3px;
+  white-space: nowrap;
+  -webkit-app-region: no-drag;
+}
+.bc-prev {
+  color: var(--muted2); cursor: pointer;
+  transition: color 0.12s;
+}
+.bc-prev:hover { color: var(--text); }
+.bc-div { color: var(--muted); }
+.bc-cur { color: var(--amber); font-weight: 700; }
+
+.nav-right { margin-left: auto; -webkit-app-region: no-drag; }
+.close-btn {
+  width: 28px; height: 28px;
+  background: var(--s1); border: 1px solid var(--border); border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: var(--muted2); cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+  user-select: none;
+}
+.close-btn:hover { color: var(--text); border-color: var(--bhi); }
+
+
+/* ── LAYOUT ─────────────────────────────────────── */
+.layout {
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: 196px 1fr;
+}
+
+
+/* ── SIDEBAR ─────────────────────────────────────── */
+.sidebar {
+  border-right: 1px solid var(--border);
+  padding: 18px 14px;
+  display: flex; flex-direction: column; gap: 4px;
+  background: oklch(9% 0.006 75 / 60%);
+  overflow-y: auto;
+}
+
+.sidebar-lbl {
+  font-size: 9px; font-weight: 700; letter-spacing: 2.5px;
+  text-transform: uppercase; color: var(--muted);
+  padding: 0 6px; margin-bottom: 4px; margin-top: 2px;
+}
+
+.stab {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px; border-radius: 4px; border: 1px solid transparent;
+  cursor: pointer; font-size: 11px;
+  color: var(--muted2);
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  user-select: none;
+}
+.stab:hover { background: var(--s2); color: var(--text); }
+.stab.active {
+  background: var(--amber-bg);
+  border-color: oklch(67% 0.17 72 / 22%);
+  color: var(--amber);
+}
+.stab-icon { font-size: 14px; flex-shrink: 0; line-height: 1; }
+.stab-label { flex: 1; font-weight: 600; }
+.stab-badge {
+  font-size: 8px; color: var(--muted);
+  background: var(--s3); border-radius: 99px;
+  padding: 1px 6px; font-weight: 700;
+}
+.stab.active .stab-badge { background: var(--amber-bg); color: var(--amber); }
+
+.sdiv { height: 1px; background: var(--border); margin: 8px 2px; }
+
+.sound-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px 6px 10px; border-radius: 4px;
+  font-size: 10px; color: var(--muted2);
+  transition: background 0.12s, color 0.12s, opacity 0.12s;
+  cursor: grab;
+  border: 1px solid transparent;
+}
+.sound-row:hover     { background: var(--s2); color: var(--text); border-color: var(--border); }
+.sound-row:active    { cursor: grabbing; }
+.sound-row.dragging  { opacity: 0.45; }
+.sound-row-handle {
+  font-size: 11px; color: var(--muted); flex-shrink: 0;
+  letter-spacing: -2px; user-select: none;
+}
+.sound-row-kind {
+  font-size: 10px; color: var(--amber); flex-shrink: 0;
+  width: 14px; text-align: center; opacity: 0.7;
+}
+.sound-row-name { flex: 1; font-weight: 600; letter-spacing: 0.2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sound-row-name[contenteditable="true"] {
+  outline: 1px solid var(--amber); outline-offset: 1px;
+  background: var(--bg); color: var(--text); cursor: text;
+  border-radius: 2px; padding: 0 2px;
+}
+.sound-row-play {
+  font-size: 10px; color: var(--muted); flex-shrink: 0;
+  width: 16px; height: 16px; border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; opacity: 0;
+  transition: opacity 0.12s, color 0.12s, background 0.12s;
+}
+.sound-row:hover .sound-row-play { opacity: 1; }
+.sound-row-play:hover { color: var(--amber); background: var(--amber-bg); }
+.sound-row-del {
+  font-size: 12px; color: var(--muted); flex-shrink: 0;
+  width: 16px; height: 16px; border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; opacity: 0;
+  transition: opacity 0.12s, color 0.12s, background 0.12s;
+}
+.sound-row:hover .sound-row-del { opacity: 0.85; }
+.sound-row-del:hover { color: var(--warn); background: oklch(60% 0.18 25 / 12%); opacity: 1; }
+.sidebar-empty {
+  font-size: 10px; color: var(--muted); padding: 8px 10px;
+  font-style: italic; line-height: 1.5;
+}
+.sidebar-hint {
+  font-size: 9px; color: var(--muted); padding: 6px 10px;
+  letter-spacing: 0.3px; line-height: 1.5;
+  margin-top: 8px;
+}
+.sidebar-hint strong { color: var(--amber); font-weight: 700; }
+
+
+/* ── CONTENT ─────────────────────────────────────── */
+.content {
+  padding: 22px 24px 22px;
+  display: flex; flex-direction: column; gap: 20px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.section-head {
+  display: flex; align-items: baseline; gap: 10px;
+}
+.section-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 20px; font-weight: 900; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--text);
+}
+.section-sub {
+  font-size: 10px; color: var(--muted); letter-spacing: 0.2px;
+}
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-lbl {
+  font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--muted);
+}
+
+.inp {
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: 4px; padding: 9px 12px;
+  color: var(--text); font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+  width: 100%;
+}
+.inp:focus {
+  border-color: var(--amber-d);
+  box-shadow: 0 0 0 3px var(--amber-ring);
+}
+.inp::placeholder { color: var(--muted); }
+.inp[readonly] { color: var(--muted2); cursor: default; }
+
+.inp-row { display: flex; gap: 8px; }
+.inp-row .inp { flex: 1; }
+
+.btn-fetch {
+  background: var(--amber); color: oklch(10% 0.01 75);
+  border: none; border-radius: 4px;
+  padding: 9px 16px; font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; font-weight: 900; letter-spacing: 0.5px;
+  text-transform: uppercase; cursor: pointer; white-space: nowrap;
+  transition: box-shadow 0.12s, transform 0.08s;
+}
+.btn-fetch:hover { box-shadow: 0 0 18px var(--amber-ring); transform: translateY(-1px); }
+.btn-fetch:active { transform: scale(0.97); }
+
+.preview-card {
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: 5px; overflow: hidden;
+  display: grid; grid-template-columns: 140px 1fr;
+}
+.preview-thumb {
+  background: oklch(5% 0.004 75);
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  aspect-ratio: 16 / 9; width: 140px;
+}
+.preview-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.preview-play-overlay {
+  position: absolute; inset: 0;
+  background: oklch(0% 0 0 / 28%);
+  display: flex; align-items: center; justify-content: center;
+}
+.play-mark {
+  width: 30px; height: 30px;
+  background: oklch(0% 0 0 / 70%); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; padding-left: 2px;
+}
+.preview-info {
+  padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 5px;
+  justify-content: center;
+}
+.preview-title {
+  font-size: 11px; font-weight: 700; line-height: 1.35;
+  color: var(--text);
+}
+.preview-meta {
+  font-size: 9px; color: var(--muted); letter-spacing: 0.2px;
+  display: flex; flex-wrap: wrap; gap: 4px 12px;
+}
+.preview-meta b { color: var(--muted2); font-weight: 600; }
+
+.rule { height: 1px; background: var(--border); flex-shrink: 0; }
+
+.wf-head {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 9px;
+}
+.wf-lbl { font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+.wf-time { color: var(--amber); }
+.wf-time strong { font-weight: 700; }
+
+.wf-track {
+  position: relative; height: 56px;
+  background: var(--s1); border: 1px solid var(--border); border-radius: 4px;
+  overflow: hidden; cursor: crosshair;
+}
+.wf-bars {
+  display: flex; align-items: center; height: 100%;
+  gap: 1.5px; padding: 4px 6px;
+}
+.wfb {
+  flex: 1; min-width: 0; border-radius: 1px;
+  background: oklch(100% 0 0 / 12%);
+  transition: background 0.08s;
+}
+.wfb.sel { background: oklch(67% 0.17 72 / 55%); }
+
+.wf-region {
+  position: absolute; top: 0; bottom: 0;
+  background: oklch(67% 0.17 72 / 8%);
+  border-left:  2px solid var(--amber);
+  border-right: 2px solid var(--amber);
+  pointer-events: none;
+  left: 28%; width: 32%;
+}
+.wf-handle {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 10px; height: 24px;
+  background: var(--amber); border-radius: 2px;
+  cursor: ew-resize; pointer-events: all;
+}
+.wf-handle.l { left: -5px; }
+.wf-handle.r { right: -5px; }
+
+.time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.time-field { display: flex; flex-direction: column; gap: 4px; }
+.time-lbl { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.time-inp {
+  background: var(--s1); border: 1px solid var(--border); border-radius: 4px;
+  padding: 7px 10px; color: var(--amber);
+  font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 700;
+  text-align: center; outline: none; width: 100%;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.time-inp:focus { border-color: var(--amber-d); box-shadow: 0 0 0 3px var(--amber-ring); }
+
+.settings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.sel-inp {
+  background: var(--s1); border: 1px solid var(--border); border-radius: 4px;
+  padding: 9px 12px; color: var(--text);
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  outline: none; width: 100%; cursor: pointer;
+  transition: border-color 0.12s;
+  -webkit-appearance: none;
+}
+.sel-inp:focus { border-color: var(--amber-d); }
+
+.emoji-grid { display: flex; gap: 6px; flex-wrap: wrap; }
+.emoji-opt {
+  width: 34px; height: 34px;
+  background: var(--s1); border: 1px solid var(--border); border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  user-select: none;
+}
+.emoji-opt:hover { background: var(--s2); border-color: var(--bhi); }
+.emoji-opt.active { border-color: var(--amber-d); background: var(--amber-bg); }
+
+.kb-grid { display: flex; gap: 5px; flex-wrap: wrap; }
+.kb-key {
+  width: 30px; height: 30px;
+  background: var(--s1); border: 1px solid var(--border);
+  border-bottom: 2px solid var(--muted);
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 17px; font-weight: 900;
+  color: var(--muted); cursor: pointer;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  user-select: none;
+}
+.kb-key:hover:not(.used) {
+  background: var(--s2); color: var(--muted2);
+  border-bottom-color: var(--muted2);
+}
+.kb-key.used {
+  opacity: 0.28; cursor: not-allowed;
+  border-bottom-color: var(--border);
+}
+.kb-key.active {
+  background: var(--amber-bg);
+  border-color: var(--amber-d);
+  border-bottom: 2px solid var(--amber);
+  color: var(--amber);
+}
+
+
+/* ── FOOTER ─────────────────────────────────────── */
+.footer {
+  height: 52px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 20px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--nav-bg);
+  backdrop-filter: blur(14px);
+}
+
+.btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+  border: none; border-radius: 3px;
+  padding: 7px 14px; cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  text-transform: uppercase;
+  transition: opacity 0.12s, transform 0.08s, box-shadow 0.12s;
+  white-space: nowrap;
+}
+.btn:hover  { transform: translateY(-1px); }
+.btn:active { transform: scale(0.97); }
+
+.btn-preview {
+  background: var(--s1); border: 1px solid var(--border); color: var(--muted2);
+}
+.btn-preview:hover { border-color: var(--bhi); color: var(--text); }
+
+.spacer { flex: 1; }
+
+.btn-cancel {
+  background: none; border: 1px solid var(--border); color: var(--muted);
+}
+.btn-cancel:hover { border-color: var(--bhi); color: var(--muted2); }
+
+.btn-add {
+  background: var(--amber); color: oklch(10% 0.01 75);
+  font-weight: 900; letter-spacing: 0.8px;
+}
+.btn-add:hover { box-shadow: 0 0 20px oklch(67% 0.17 72 / 32%); }
+.btn-add:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ── RECORD PANE ─────────────────────────────── */
+.src-pane[hidden] { display: none !important; }
+
+.rec-card {
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: 5px; padding: 22px 22px 18px;
+  display: flex; flex-direction: column; gap: 14px;
+  align-items: center;
+}
+.rec-header {
+  width: 100%;
+  display: flex; align-items: baseline; justify-content: space-between;
+}
+.rec-status {
+  font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--muted2); font-weight: 700;
+}
+.rec-status.is-live { color: var(--warn); }
+.rec-status.is-done { color: var(--amber); }
+
+.rec-time {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 36px; font-weight: 900; line-height: 1;
+  color: var(--text); letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums;
+}
+.rec-time span {
+  font-size: 14px; color: var(--muted); margin-left: 2px;
+}
+
+.rec-meter {
+  width: 100%; height: 64px;
+  display: flex; align-items: center; justify-content: center;
+  gap: 3px;
+}
+.rec-meter-bar {
+  width: 4px; height: 8%; border-radius: 2px;
+  background: oklch(67% 0.17 72 / 35%);
+  transition: height 0.06s linear, background 0.2s;
+}
+.rec-meter.is-live .rec-meter-bar { background: var(--amber); }
+
+.rec-controls {
+  display: flex; align-items: center; gap: 12px; margin-top: 4px;
+}
+.rec-mic-btn {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--amber);
+  border: 3px solid oklch(67% 0.17 72 / 35%);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.12s, box-shadow 0.18s, border-color 0.18s, background 0.18s;
+  box-shadow: 0 0 0 0 oklch(67% 0.17 72 / 0%);
+  position: relative;
+}
+.rec-mic-btn:hover  { transform: translateY(-1px); box-shadow: 0 0 24px var(--amber-ring); }
+.rec-mic-btn:active { transform: scale(0.96); }
+
+/* Mic glyph: a filled red dot (idle) → square (recording) → arrow (recorded) */
+.rec-mic-glyph {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: oklch(10% 0.01 75);
+  transition: width 0.18s, height 0.18s, border-radius 0.18s, background 0.18s;
+}
+.rec-mic-btn.is-recording {
+  background: var(--warn);
+  border-color: oklch(60% 0.18 25 / 35%);
+  animation: rec-pulse 1.2s ease-in-out infinite;
+}
+.rec-mic-btn.is-recording .rec-mic-glyph {
+  width: 16px; height: 16px; border-radius: 2px;
+  background: oklch(98% 0 0);
+}
+.rec-mic-btn.is-recorded { background: oklch(62% 0.14 155); }
+.rec-mic-btn.is-recorded .rec-mic-glyph {
+  width: 0; height: 0; border-radius: 0;
+  background: transparent;
+  border-left: 12px solid oklch(10% 0.01 75);
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  margin-left: 3px;
+}
+@keyframes rec-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(60% 0.18 25 / 50%); }
+  50%      { box-shadow: 0 0 0 14px oklch(60% 0.18 25 / 0%); }
+}
+
+.rec-reset-btn {
+  background: var(--s2); border: 1px solid var(--border); color: var(--muted2);
+}
+.rec-reset-btn:hover { border-color: var(--bhi); color: var(--text); }
+
+.rec-playback {
+  width: 100%; margin-top: 6px;
+  filter: invert(0.85) hue-rotate(180deg);
+}
+:root[data-theme="light"] .rec-playback { filter: none; }
+
+.rec-hint  { font-size: 10px; color: var(--muted); letter-spacing: 0.3px; }
+.rec-error {
+  font-size: 10px; color: var(--warn);
+  background: oklch(60% 0.18 25 / 12%);
+  border: 1px solid oklch(60% 0.18 25 / 30%);
+  border-radius: 3px; padding: 6px 10px;
+  width: 100%; text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn:hover  { transform: none; }
+  .btn-fetch:hover { transform: none; }
+  .rec-mic-btn.is-recording { animation: none; }
+}
+</style>
+<script>(function(){var t=localStorage.getItem('mb-theme')||'dark';document.documentElement.setAttribute('data-theme',t==='system'?(window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):t);})()</script>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="logo">
+    <div class="logo-mark">MB</div>
+    <div class="logo-name">MeetingBoost</div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="breadcrumb">
+    <span class="bc-prev" onclick="window.electronAPI?.openBoard()">Board</span>
+    <span class="bc-div">/</span>
+    <span class="bc-cur">Add Sound</span>
+  </div>
+
+  <div class="nav-right">
+    <div class="close-btn" title="Close" onclick="window.electronAPI?.closeWindow()">✕</div>
+  </div>
+</nav>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-lbl">Source</div>
+
+    <div class="stab active" data-src="youtube" onclick="setTab(this)">
+      <div class="stab-icon">▶</div>
+      <div class="stab-label">YouTube Clip</div>
+    </div>
+    <div class="stab" data-src="record" onclick="setTab(this)">
+      <div class="stab-icon">●</div>
+      <div class="stab-label">Record Voice</div>
+    </div>
+
+    <div class="sdiv"></div>
+    <div class="sidebar-lbl">My Library</div>
+    <div id="recordingsList"></div>
+    <div class="sidebar-hint">
+      Drag onto a key in <strong>Sound Packs</strong> to bind.
+    </div>
+  </aside>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- ── YOUTUBE PANE ───────────────────────────────────────── -->
+    <section class="src-pane" data-src="youtube">
+
+      <div class="section-head">
+        <div class="section-title">Add from YouTube</div>
+        <div class="section-sub">paste URL · pick excerpt · assign key</div>
+      </div>
+
+      <div class="field">
+        <div class="field-lbl">YouTube URL</div>
+        <div class="inp-row">
+          <input class="inp" id="ytUrl" placeholder="https://www.youtube.com/watch?v=…">
+          <button class="btn-fetch" id="fetchBtn" onclick="fetchInfo()">Fetch ↗</button>
+        </div>
+        <div id="fetchError" style="display:none;font-size:10px;color:var(--warn);margin-top:4px;"></div>
+      </div>
+
+      <div class="preview-card" id="previewCard" style="display:none">
+        <div class="preview-thumb">
+          <img id="previewThumb" src="" alt="">
+          <div class="preview-play-overlay"><div class="play-mark">▶</div></div>
+        </div>
+        <div class="preview-info">
+          <div class="preview-title" id="previewTitle">—</div>
+          <div class="preview-meta">
+            <span>Channel <b id="previewUploader">—</b></span>
+            <span>Duration <b id="previewDuration">—</b></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="rule"></div>
+
+      <div class="field" style="gap:10px">
+        <div class="wf-head">
+          <div class="wf-lbl">Select Excerpt — drag handles or edit values</div>
+          <div class="wf-time" id="wfTime">— · 0.0s selected</div>
+        </div>
+        <div class="wf-track" id="wfTrack">
+          <div class="wf-bars" id="wfbars"></div>
+          <div class="wf-region" id="wfRegion">
+            <div class="wf-handle l" id="wfHandleL"></div>
+            <div class="wf-handle r" id="wfHandleR"></div>
+          </div>
+        </div>
+        <div class="time-row">
+          <div class="time-field">
+            <div class="time-lbl">Start (seconds)</div>
+            <input class="time-inp" id="startTime" value="0" placeholder="0" inputmode="decimal">
+          </div>
+          <div class="time-field">
+            <div class="time-lbl">End (seconds)</div>
+            <input class="time-inp" id="endTime" value="5" placeholder="5" inputmode="decimal">
+          </div>
+        </div>
+        <audio id="ytPreviewAudio" controls preload="none" style="width:100%;margin-top:6px;display:none"></audio>
+        <div id="ytPreviewStatus" style="font-size:10px;color:var(--muted);margin-top:4px;min-height:14px;"></div>
+      </div>
+
+    </section>
+
+    <!-- ── RECORD VOICE PANE ──────────────────────────────────── -->
+    <section class="src-pane" data-src="record" hidden>
+
+      <div class="section-head">
+        <div class="section-title">Record Your Voice</div>
+        <div class="section-sub">tap mic · speak · trim and assign key</div>
+      </div>
+
+      <div class="rec-card">
+        <div class="rec-header">
+          <div class="rec-status" id="recStatus">Ready when you are</div>
+          <div class="rec-time" id="recTime">0.0<span>s</span></div>
+        </div>
+
+        <div class="rec-meter" id="recMeter" aria-hidden="true"></div>
+
+        <div class="rec-controls">
+          <button class="rec-mic-btn" id="recMicBtn" onclick="toggleRecord()" aria-label="Start recording">
+            <span class="rec-mic-glyph"></span>
+          </button>
+          <button class="btn rec-reset-btn" id="recResetBtn" onclick="resetRecording()" hidden>↻ Re-record</button>
+        </div>
+
+        <audio class="rec-playback" id="recPlayback" controls hidden></audio>
+        <div class="rec-hint">Up to 30 seconds · Microphone access required</div>
+        <div id="recError" class="rec-error" hidden></div>
+      </div>
+
+    </section>
+
+    <div class="rule"></div>
+
+    <div class="field">
+      <div class="field-lbl">Display Name</div>
+      <input class="inp" id="soundName" placeholder="e.g. Sad Trombone">
+    </div>
+
+    <div class="rec-hint" style="font-size:10px;line-height:1.5;color:var(--muted);">
+      Saved sounds go into <strong style="color:var(--amber)">My Library</strong>.
+      Open <strong>Sound Packs</strong> and drag a library item onto a key to bind it.
+    </div>
+
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <button class="btn btn-preview" onclick="previewClip()">▶ Preview</button>
+  <div class="spacer"></div>
+  <button class="btn btn-cancel" onclick="window.electronAPI?.closeWindow()">Cancel</button>
+  <button class="btn btn-add" onclick="addToLibrary()">+ Add to Library</button>
+</div>
+
+<script>
+  let videoDuration = 0;  // seconds, set after fetch
+
+  // ── Waveform (decorative) ────────────────────────────────────────────
+  function buildWaveform() {
+    const wfbars = document.getElementById('wfbars');
+    wfbars.innerHTML = '';
+    const total = 58;
+    for (let i = 0; i < total; i++) {
+      const h = 14 + Math.random() * 86;
+      const b = document.createElement('div');
+      b.className = 'wfb';
+      b.style.height = h + '%';
+      wfbars.appendChild(b);
+    }
+  }
+  buildWaveform();
+
+  // Key grid removed — sounds go to library, then bind via drag-drop in packs.
+
+  // ── Time helpers ──────────────────────────────────────────────────────
+  function parseSec(val) {
+    // Accepts plain seconds ("1.2", "90") or mm:ss ("1:30.5"). Always returns
+    // a non-negative number — bad input clamps to 0 instead of NaN-poisoning
+    // the slider position math.
+    val = String(val).trim();
+    if (!val) return 0;
+    const parts = val.split(':');
+    let n;
+    if (parts.length === 1) n = parseFloat(parts[0]);
+    else                    n = (parseInt(parts[0], 10) || 0) * 60 + (parseFloat(parts[1]) || 0);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  }
+
+  function formatSec(s) {
+    if (!Number.isFinite(s) || s < 0) s = 0;
+    const m = Math.floor(s / 60);
+    const sec = (s % 60).toFixed(1).padStart(4, '0');
+    return m > 0 ? `${m}:${sec}` : sec;
+  }
+
+  // ── Excerpt slider ────────────────────────────────────────────────────
+  // The wf-region used to be statically positioned at left:28%/width:32% —
+  // visual scaffolding with no drag wiring. This block makes it functional:
+  // dragging either handle updates start/end (clamped to video duration),
+  // typing into the inputs moves the handles, and clicking on the empty
+  // track snaps the nearest handle to that position.
+  const wfTrack   = () => document.getElementById('wfTrack');
+  const wfRegion  = () => document.getElementById('wfRegion');
+  const wfHandleL = () => document.getElementById('wfHandleL');
+  const wfHandleR = () => document.getElementById('wfHandleR');
+  const startInp  = () => document.getElementById('startTime');
+  const endInp    = () => document.getElementById('endTime');
+
+  let excerptStart = 0;
+  let excerptEnd   = 5;
+
+  function clampExcerpt() {
+    const dur = Math.max(0.1, videoDuration || excerptEnd);
+    if (excerptStart < 0)         excerptStart = 0;
+    if (excerptEnd   > dur)       excerptEnd   = dur;
+    if (excerptEnd   <= excerptStart) excerptEnd = Math.min(dur, excerptStart + 0.1);
+  }
+
+  function syncSliderToValues() {
+    clampExcerpt();
+    const dur = Math.max(0.1, videoDuration || excerptEnd);
+    const reg = wfRegion();
+    if (!reg) return;
+    const leftPct  = (excerptStart / dur) * 100;
+    const widthPct = ((excerptEnd - excerptStart) / dur) * 100;
+    reg.style.left  = leftPct  + '%';
+    reg.style.width = widthPct + '%';
+
+    // Highlight the underlying waveform bars within the region for feedback.
+    const bars = document.querySelectorAll('.wfb');
+    bars.forEach((b, i) => {
+      const pct = (i + 0.5) / bars.length;
+      const inside = pct * dur >= excerptStart && pct * dur <= excerptEnd;
+      b.classList.toggle('sel', inside);
+    });
+
+    document.getElementById('wfTime').innerHTML =
+      `${excerptStart.toFixed(1)}s – ${excerptEnd.toFixed(1)}s &nbsp;·&nbsp; <strong>${(excerptEnd - excerptStart).toFixed(1)}s selected</strong>`;
+    invalidateClipCache();
+  }
+
+  function syncInputsToValues() {
+    startInp().value = excerptStart.toFixed(2);
+    endInp().value   = excerptEnd.toFixed(2);
+  }
+
+  function setExcerpt(start, end, opts = {}) {
+    excerptStart = start;
+    excerptEnd   = end;
+    clampExcerpt();
+    syncSliderToValues();
+    if (!opts.skipInputs) syncInputsToValues();
+  }
+
+  function bindExcerptDrag() {
+    const track = wfTrack();
+    if (!track) return;
+    let dragging = null;       // 'l' | 'r' | null
+    let trackRect = null;
+
+    function pctFromEvent(e) {
+      if (!trackRect) trackRect = track.getBoundingClientRect();
+      const x = (e.touches ? e.touches[0].clientX : e.clientX) - trackRect.left;
+      return Math.max(0, Math.min(1, x / trackRect.width));
+    }
+
+    function onMove(e) {
+      if (!dragging) return;
+      e.preventDefault();
+      const pct = pctFromEvent(e);
+      const dur = Math.max(0.1, videoDuration || excerptEnd);
+      const t   = pct * dur;
+      if (dragging === 'l') excerptStart = Math.min(t, excerptEnd - 0.1);
+      else                  excerptEnd   = Math.max(t, excerptStart + 0.1);
+      clampExcerpt();
+      syncSliderToValues();
+      syncInputsToValues();
+    }
+
+    function onUp() {
+      dragging  = null;
+      trackRect = null;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend',  onUp);
+    }
+
+    function startDrag(which, e) {
+      dragging  = which;
+      trackRect = track.getBoundingClientRect();
+      e.preventDefault();
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup',   onUp);
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend',  onUp);
+    }
+
+    wfHandleL().addEventListener('mousedown',  e => startDrag('l', e));
+    wfHandleR().addEventListener('mousedown',  e => startDrag('r', e));
+    wfHandleL().addEventListener('touchstart', e => startDrag('l', e), { passive: false });
+    wfHandleR().addEventListener('touchstart', e => startDrag('r', e), { passive: false });
+
+    // Click on empty track snaps the nearest handle to that point.
+    track.addEventListener('click', e => {
+      if (e.target === wfHandleL() || e.target === wfHandleR()) return;
+      const dur = Math.max(0.1, videoDuration || excerptEnd);
+      const t   = pctFromEvent(e) * dur;
+      if (Math.abs(t - excerptStart) < Math.abs(t - excerptEnd)) excerptStart = t;
+      else                                                       excerptEnd   = t;
+      clampExcerpt();
+      syncSliderToValues();
+      syncInputsToValues();
+    });
+
+    // Inputs feed back into the slider on commit.
+    function inputCommit() {
+      excerptStart = parseSec(startInp().value);
+      excerptEnd   = parseSec(endInp().value);
+      clampExcerpt();
+      syncSliderToValues();
+      syncInputsToValues();
+    }
+    startInp().addEventListener('change', inputCommit);
+    endInp().addEventListener('change',   inputCommit);
+    startInp().addEventListener('blur',   inputCommit);
+    endInp().addEventListener('blur',     inputCommit);
+  }
+  bindExcerptDrag();
+
+  // ── Fetch video info ──────────────────────────────────────────────────
+  async function fetchInfo() {
+    const url    = document.getElementById('ytUrl').value.trim();
+    const errEl  = document.getElementById('fetchError');
+    const btn    = document.getElementById('fetchBtn');
+    if (!url) { showError('Paste a YouTube URL first.'); return; }
+
+    btn.textContent = 'Fetching…';
+    btn.disabled    = true;
+    errEl.style.display = 'none';
+
+    const result = await window.electronAPI?.ytInfo(url);
+
+    btn.textContent = 'Fetch ↗';
+    btn.disabled    = false;
+
+    if (!result?.ok) {
+      showError(result?.error || 'Could not fetch video info. Check yt-dlp is installed.');
+      return;
+    }
+
+    videoDuration = result.duration || 0;
+
+    // Update preview card
+    const videoId = extractVideoId(url);
+    document.getElementById('previewThumb').src =
+      videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : '';
+    document.getElementById('previewTitle').textContent    = result.title || '—';
+    document.getElementById('previewUploader').textContent = result.uploader || '—';
+    document.getElementById('previewDuration').textContent = formatSec(videoDuration);
+    document.getElementById('previewCard').style.display = 'grid';
+
+    // Pre-fill name and sensible start/end. setExcerpt drives both the
+    // <input> values and the slider region from the same source of truth.
+    document.getElementById('soundName').value = sanitizeName(result.title || '');
+    setExcerpt(0, Math.min(videoDuration, 5));
+
+    buildWaveform();
+    syncSliderToValues();   // recolor newly-built bars
+  }
+
+  function extractVideoId(url) {
+    const m = url.match(/[?&]v=([^&]+)/) || url.match(/youtu\.be\/([^?]+)/);
+    return m ? m[1] : null;
+  }
+
+  function sanitizeName(title) {
+    return title.replace(/[^\w\s-]/g, '').replace(/\s+/g, ' ').trim().slice(0, 32);
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('fetchError');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function activeSource() {
+    return document.querySelector('.stab.active')?.dataset.src || 'youtube';
+  }
+
+  // ── YouTube clip cache (renderer side) ────────────────────────────────
+  // Tracks the most-recent prepared excerpt so a Preview followed by Add
+  // doesn't re-download. Cleared whenever start/end/url change.
+  let clipCache = null; // { url, start, end, cachePath, playUrl }
+  function invalidateClipCache() { clipCache = null; }
+  document.getElementById('ytUrl')?.addEventListener('input', invalidateClipCache);
+
+  async function ensureYoutubeClip(forceLabel) {
+    const url   = document.getElementById('ytUrl').value.trim();
+    const start = excerptStart;
+    const end   = excerptEnd;
+    const status = document.getElementById('ytPreviewStatus');
+    if (!url)         { showError('No YouTube URL.'); return null; }
+    if (end <= start) { showError('End time must be after start time.'); return null; }
+
+    if (clipCache && clipCache.url === url && clipCache.start === start && clipCache.end === end) {
+      return clipCache;
+    }
+
+    status.textContent = forceLabel || 'Downloading excerpt…';
+    const result = await window.electronAPI?.ytPrepareClip({ url, start, end });
+    if (!result?.ok) {
+      status.textContent = '';
+      showError(result?.error || 'Could not prepare clip. Check yt-dlp + ffmpeg.');
+      return null;
+    }
+    status.textContent = result.cached ? 'Loaded from cache.' : 'Ready.';
+    clipCache = { url, start, end, cachePath: result.cachePath, playUrl: result.url };
+    return clipCache;
+  }
+
+  // ── Add to Library ────────────────────────────────────────────────────
+  async function addToLibrary() {
+    if (activeSource() === 'record') return addRecordingToLibrary();
+    return addYoutubeToLibrary();
+  }
+
+  async function addYoutubeToLibrary() {
+    const name = document.getElementById('soundName').value.trim();
+    if (!name) { showError('Enter a display name.'); return; }
+
+    const btn = document.querySelector('.btn-add');
+    btn.textContent = 'Saving…';
+    btn.disabled    = true;
+
+    const clip = await ensureYoutubeClip('Downloading…');
+    if (!clip) { btn.textContent = '+ Add to Library'; btn.disabled = false; return; }
+
+    const url = document.getElementById('ytUrl').value.trim();
+    const result = await window.electronAPI?.libraryAddFromClip({
+      cachePath:  clip.cachePath,
+      name,
+      sourceUrl:  url,
+      durationMs: Math.round((clip.end - clip.start) * 1000),
+    });
+
+    btn.disabled = false;
+    if (!result?.ok) {
+      btn.textContent = '+ Add to Library';
+      showError(result?.error || 'Save failed.');
+      return;
+    }
+
+    btn.textContent = '✓ In Library';
+    await refreshRecordings();
+    setTimeout(() => {
+      btn.textContent = '+ Add to Library';
+      // Soft-reset the form so the user can grab another excerpt without reload.
+      document.getElementById('ytPreviewStatus').textContent = '';
+      const a = document.getElementById('ytPreviewAudio');
+      if (a) { try { a.pause(); } catch {} a.style.display = 'none'; a.removeAttribute('src'); }
+    }, 900);
+  }
+
+  async function addRecordingToLibrary() {
+    if (!recordedBlob) { showRecError('Record something first.'); return; }
+    const name = document.getElementById('soundName').value.trim();
+    if (!name) { showRecError('Enter a display name.'); return; }
+
+    const btn = document.querySelector('.btn-add');
+    btn.textContent = 'Saving…';
+    btn.disabled    = true;
+
+    const arrayBuffer = await recordedBlob.arrayBuffer();
+    const elapsed     = recordStartTs ? performance.now() - recordStartTs : 0;
+    const result = await window.electronAPI?.recordingSave({
+      name,
+      buffer:     new Uint8Array(arrayBuffer),
+      durationMs: Math.round(elapsed),
+    });
+
+    btn.disabled = false;
+    if (!result?.ok) {
+      btn.textContent = '+ Save to Library';
+      showRecError(result?.error || 'Save failed. Check ffmpeg is installed.');
+      return;
+    }
+
+    btn.textContent = '✓ Saved!';
+    await refreshRecordings();
+    setTimeout(() => {
+      btn.textContent = '+ Save to Library';
+      resetRecording();
+      document.getElementById('soundName').value = '';
+    }, 900);
+  }
+
+  // ── Preview ────────────────────────────────────────────────────────────
+  // YouTube preview now does the actual download (cached) and plays the real
+  // excerpt — used to be a 440Hz sine placeholder. Mic preview replays the
+  // most recent recording. Single-voice: clicking Preview while a preview
+  // is playing stops it.
+  let ytPreviewAudio = null;
+  function stopYtPreview() {
+    const a = document.getElementById('ytPreviewAudio');
+    if (a) { try { a.pause(); } catch {} }
+    if (ytPreviewAudio) { try { ytPreviewAudio.pause(); } catch {} ytPreviewAudio = null; }
+  }
+
+  async function previewClip() {
+    if (activeSource() === 'record') {
+      const audio = document.getElementById('recPlayback');
+      if (audio?.src) { audio.currentTime = 0; audio.play().catch(() => {}); }
+      return;
+    }
+
+    const audioEl = document.getElementById('ytPreviewAudio');
+    if (audioEl && !audioEl.paused && audioEl.src) {
+      stopYtPreview();
+      return;
+    }
+
+    const clip = await ensureYoutubeClip('Preparing preview…');
+    if (!clip) return;
+
+    audioEl.src = clip.playUrl;
+    audioEl.style.display = 'block';
+    audioEl.currentTime = 0;
+    audioEl.play().catch(err => {
+      document.getElementById('ytPreviewStatus').textContent = 'Playback failed: ' + err.message;
+    });
+    ytPreviewAudio = audioEl;
+  }
+
+  // ── Emoji picker ──────────────────────────────────────────────────────
+  document.querySelectorAll('.emoji-opt').forEach(e => {
+    e.onclick = () => {
+      document.querySelectorAll('.emoji-opt.active').forEach(x => x.classList.remove('active'));
+      e.classList.add('active');
+    };
+  });
+
+  // ── Source tabs ───────────────────────────────────────────────────────
+  function setTab(el) {
+    document.querySelectorAll('.stab.active').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+    const src = el.dataset.src || 'youtube';
+    document.querySelectorAll('.src-pane').forEach(p => {
+      p.hidden = p.dataset.src !== src;
+    });
+    if (src !== 'record' && recordingState === 'recording') stopRecording();
+    if (src !== 'youtube') stopYtPreview();
+
+    // Footer label reflects what "+" actually does on this tab.
+    const addBtn = document.querySelector('.btn-add');
+    if (addBtn) {
+      addBtn.textContent =
+        src === 'record'  ? '+ Save to Library' :
+        src === 'youtube' ? '+ Add to Library'  :
+                            '+ Add to Library';
+    }
+  }
+
+  // ── Voice recording ───────────────────────────────────────────────────
+  const REC_MAX_SEC = 30;
+  const REC_METER_BARS = 36;
+
+  let mediaStream    = null;
+  let mediaRecorder  = null;
+  let recordedChunks = [];
+  let recordedBlob   = null;
+  let recordStartTs  = 0;
+  let recordTimer    = null;
+  let analyser       = null;
+  let analyserData   = null;
+  let analyserAnimId = null;
+  let audioCtx       = null;
+  let recordingState = 'idle';      // 'idle' | 'recording' | 'recorded'
+
+  // Build empty meter bars once
+  (function buildRecMeter() {
+    const meter = document.getElementById('recMeter');
+    if (!meter) return;
+    for (let i = 0; i < REC_METER_BARS; i++) {
+      const b = document.createElement('div');
+      b.className = 'rec-meter-bar';
+      meter.appendChild(b);
+    }
+  })();
+
+  function showRecError(msg) {
+    const el = document.getElementById('recError');
+    el.textContent = msg;
+    el.hidden = false;
+  }
+  function clearRecError() {
+    const el = document.getElementById('recError');
+    el.hidden = true;
+    el.textContent = '';
+  }
+
+  async function toggleRecord() {
+    clearRecError();
+    if (recordingState === 'idle')      return startRecording();
+    if (recordingState === 'recording') return stopRecording();
+    if (recordingState === 'recorded') {
+      resetRecording();
+      return startRecording();
+    }
+  }
+
+  async function startRecording() {
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+    } catch (e) {
+      showRecError('Microphone access denied. Grant it in System Settings → Privacy & Security → Microphone.');
+      return;
+    }
+    mediaStream = stream;
+
+    // Visualizer
+    audioCtx       = new (window.AudioContext || window.webkitAudioContext)();
+    const source   = audioCtx.createMediaStreamSource(stream);
+    analyser       = audioCtx.createAnalyser();
+    analyser.fftSize = 128;
+    analyser.smoothingTimeConstant = 0.7;
+    analyserData   = new Uint8Array(analyser.frequencyBinCount);
+    source.connect(analyser);
+    document.getElementById('recMeter').classList.add('is-live');
+    drawMeter();
+
+    // MediaRecorder
+    recordedChunks = [];
+    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : 'audio/webm';
+    mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
+    mediaRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = handleRecordingStop;
+    mediaRecorder.start();
+
+    recordStartTs  = performance.now();
+    recordingState = 'recording';
+
+    const status = document.getElementById('recStatus');
+    status.textContent = 'Recording…';
+    status.classList.add('is-live');
+    status.classList.remove('is-done');
+
+    const btn = document.getElementById('recMicBtn');
+    btn.classList.add('is-recording');
+    btn.classList.remove('is-recorded');
+    btn.setAttribute('aria-label', 'Stop recording');
+
+    document.getElementById('recPlayback').hidden = true;
+    document.getElementById('recResetBtn').hidden  = true;
+
+    recordTimer = setInterval(() => {
+      const elapsed = (performance.now() - recordStartTs) / 1000;
+      document.getElementById('recTime').innerHTML =
+        elapsed.toFixed(1) + '<span>s</span>';
+      if (elapsed >= REC_MAX_SEC) stopRecording();
+    }, 50);
+  }
+
+  function stopRecording() {
+    clearInterval(recordTimer);
+    recordTimer = null;
+    if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+    if (analyserAnimId) { cancelAnimationFrame(analyserAnimId); analyserAnimId = null; }
+    document.getElementById('recMeter').classList.remove('is-live');
+    // Decay meter bars to rest
+    document.querySelectorAll('.rec-meter-bar').forEach(b => { b.style.height = '8%'; });
+  }
+
+  function handleRecordingStop() {
+    mediaStream?.getTracks().forEach(t => t.stop());
+    mediaStream = null;
+    if (audioCtx?.state !== 'closed') audioCtx?.close().catch(() => {});
+
+    recordedBlob = new Blob(recordedChunks, { type: mediaRecorder?.mimeType || 'audio/webm' });
+    const audio  = document.getElementById('recPlayback');
+    audio.src    = URL.createObjectURL(recordedBlob);
+    audio.hidden = false;
+
+    recordingState = 'recorded';
+
+    const status = document.getElementById('recStatus');
+    status.textContent = 'Recorded — preview, then add';
+    status.classList.remove('is-live');
+    status.classList.add('is-done');
+
+    const btn = document.getElementById('recMicBtn');
+    btn.classList.remove('is-recording');
+    btn.classList.add('is-recorded');
+    btn.setAttribute('aria-label', 'Re-record');
+
+    document.getElementById('recResetBtn').hidden = false;
+  }
+
+  function resetRecording() {
+    clearRecError();
+    stopRecording();
+    recordedChunks = [];
+    recordedBlob   = null;
+    recordingState = 'idle';
+
+    const status = document.getElementById('recStatus');
+    status.textContent = 'Ready when you are';
+    status.classList.remove('is-live', 'is-done');
+
+    document.getElementById('recTime').innerHTML = '0.0<span>s</span>';
+
+    const btn = document.getElementById('recMicBtn');
+    btn.classList.remove('is-recording', 'is-recorded');
+    btn.setAttribute('aria-label', 'Start recording');
+
+    const audio = document.getElementById('recPlayback');
+    if (audio.src) URL.revokeObjectURL(audio.src);
+    audio.removeAttribute('src');
+    audio.hidden = true;
+    document.getElementById('recResetBtn').hidden = true;
+  }
+
+  function drawMeter() {
+    const bars = document.querySelectorAll('.rec-meter-bar');
+    function tick() {
+      if (!analyser) return;
+      analyser.getByteFrequencyData(analyserData);
+      const bin = analyserData.length;
+      for (let i = 0; i < bars.length; i++) {
+        // Sample low-to-mid frequencies — voice fundamentals live there
+        const idx = Math.floor(i / bars.length * bin * 0.6);
+        const v   = analyserData[idx] || 0;
+        bars[i].style.height = (8 + (v / 255) * 92) + '%';
+      }
+      analyserAnimId = requestAnimationFrame(tick);
+    }
+    tick();
+  }
+
+  // Live theme change from settings
+  window.electronAPI?.onThemeChanged?.((_e, mode) => {
+    localStorage.setItem('mb-theme', mode);
+    const resolved = mode === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+      : mode;
+    document.documentElement.setAttribute('data-theme', resolved);
+  });
+
+  // ── Recordings inventory ──────────────────────────────────────────────
+  // Renders the keyless recordings list in the sidebar. Each row is a
+  // drag-source — packs.html accepts these drops onto pack-key tiles.
+  let recPreviewAudio = null;
+
+  async function refreshRecordings() {
+    const list = await window.electronAPI?.recordingList?.() ?? [];
+    const root = document.getElementById('recordingsList');
+    if (!root) return;
+    root.innerHTML = '';
+
+    if (list.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'sidebar-empty';
+      empty.textContent = 'No sounds yet. Record one or grab a YouTube clip.';
+      root.appendChild(empty);
+      return;
+    }
+
+    for (const r of list) {
+      const row = document.createElement('div');
+      row.className   = 'sound-row';
+      row.draggable   = true;
+      row.dataset.id  = r.id;
+      row.dataset.url = r.url;
+      row.title       = (r.kind === 'youtube' ? 'YouTube clip — ' : 'Mic recording — ') + r.name;
+      const kindGlyph = r.kind === 'youtube' ? '▶' : '🎙';
+      row.innerHTML = `
+        <div class="sound-row-handle" aria-hidden="true">⠿</div>
+        <div class="sound-row-kind" aria-hidden="true">${kindGlyph}</div>
+        <div class="sound-row-name"></div>
+        <div class="sound-row-play" title="Preview">▶</div>
+        <div class="sound-row-del" title="Delete from library">×</div>
+      `;
+      const nameEl = row.querySelector('.sound-row-name');
+      nameEl.textContent = r.name;
+      nameEl.title = 'Double-click to rename';
+
+      // Double-click to rename — commits on Enter or blur, cancels on Escape.
+      // While editing we drop draggable + grab cursor so text selection works.
+      nameEl.addEventListener('dblclick', e => {
+        e.stopPropagation();
+        nameEl.contentEditable = 'true';
+        row.draggable = false;
+        nameEl.focus();
+        // Select-all so the user can just type to replace.
+        const range = document.createRange();
+        range.selectNodeContents(nameEl);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      });
+
+      const commitRename = async () => {
+        if (nameEl.contentEditable !== 'true') return;
+        nameEl.contentEditable = 'false';
+        row.draggable = true;
+        const next = nameEl.textContent.trim();
+        if (!next || next === r.name) {
+          nameEl.textContent = r.name;   // revert empty / no-op
+          return;
+        }
+        const res = await window.electronAPI?.recordingRename?.(r.id, next);
+        if (!res?.ok) {
+          nameEl.textContent = r.name;   // revert on backend failure
+        }
+        // Success path: onRecordingsChanged broadcast will re-render.
+      };
+
+      nameEl.addEventListener('keydown', e => {
+        if (e.key === 'Enter')  { e.preventDefault(); nameEl.blur(); }
+        if (e.key === 'Escape') { e.preventDefault(); nameEl.textContent = r.name; nameEl.blur(); }
+      });
+      nameEl.addEventListener('blur', commitRename);
+
+      row.addEventListener('dragstart', e => {
+        row.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'copy';
+        // Use a custom MIME so packs.html can detect our payload reliably.
+        e.dataTransfer.setData('application/x-mb-recording',
+          JSON.stringify({ id: r.id, name: r.name, url: r.url }));
+        e.dataTransfer.setData('text/plain', r.name);
+      });
+      row.addEventListener('dragend', () => row.classList.remove('dragging'));
+
+      row.querySelector('.sound-row-play').addEventListener('click', e => {
+        e.stopPropagation();
+        if (recPreviewAudio) { try { recPreviewAudio.pause(); } catch {} }
+        recPreviewAudio = new Audio(r.url);
+        recPreviewAudio.play().catch(() => {});
+      });
+
+      row.querySelector('.sound-row-del').addEventListener('click', async e => {
+        e.stopPropagation();
+        const ok = confirm(`Delete recording "${r.name}"?`);
+        if (!ok) return;
+        await window.electronAPI?.recordingDelete?.(r.id);
+        await refreshRecordings();
+      });
+
+      root.appendChild(row);
+    }
+  }
+
+  refreshRecordings();
+  window.electronAPI?.onRecordingsChanged?.(() => refreshRecordings());
+
+  // Initial tab state — make sure footer label and key picker reflect default.
+  setTab(document.querySelector('.stab.active'));
+</script>
+</body>
+</html>

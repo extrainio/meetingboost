@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  # ── Lint + Type-check + Unit tests (fast, cheap) ───────────────────────────
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: TypeScript compile check
+        run: npx tsc --noEmit
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python test deps
+        run: pip install pytest
+
+      - name: Run unit tests (sound integrity)
+        run: python3 -m pytest tests/test_sounds.py -v
+
+      - name: Run YouTube pipeline unit tests
+        run: python3 -m pytest tests/test_youtube_download.py::TestTimeParsing tests/test_youtube_download.py::TestPacksJsonUpdate -v
+
+      - name: Run .mbpack format tests
+        run: python3 -m pytest tests/test_pack_format.py -v
+
+      - name: Install ffmpeg (for recording-pipeline tests)
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Run recording-pipeline tests
+        run: python3 -m pytest tests/test_record_pipeline.py -v
+
+  # ── Playwright E2E (Electron full IPC chain) ───────────────────────────────
+  # Runs on macOS-14 because Electron binds to native macOS APIs (tray, global
+  # shortcuts, BrowserWindow) that don't exist on the Linux runner.
+  e2e:
+    name: E2E (Playwright on Electron)
+    runs-on: macos-14
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright E2E
+        run: npm run test:e2e
+
+      - name: Upload Playwright artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+

@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeetingBoost</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      oklch(7.5% 0.006 75);
+  --s1:      oklch(10.5% 0.007 75);
+  --s2:      oklch(13.5% 0.008 75);
+  --s3:      oklch(18% 0.009 75);
+
+  --border:  oklch(100% 0 0 / 5.5%);
+  --bhi:     oklch(100% 0 0 / 11%);
+
+  --text:    oklch(88% 0.007 78);
+  --muted:   oklch(36% 0.006 76);
+  --muted2:  oklch(52% 0.007 76);
+
+  --amber:      oklch(67% 0.17 72);
+  --amber-d:    oklch(54% 0.15 72);
+  --amber-bg:   oklch(67% 0.17 72 / 11%);
+  --amber-glow: oklch(67% 0.17 72 / 18%);
+
+  --warn:    oklch(60% 0.18 25);
+  --nav-bg:  oklch(7.5% 0.006 75 / 82%);
+}
+
+:root[data-theme="light"] {
+  /* Light palette tuned for contrast — old values had bg=97.5/s1=94 (cards
+     barely visible) and muted=52 keycap text reading as grey-on-grey. New
+     values widen the bg/card delta and darken the muted tokens enough that
+     the 42px keycap labels actually read on a white card. */
+  --bg:      oklch(98%   0.005 80);
+  --s1:      oklch(92.5% 0.006 78);
+  --s2:      oklch(87%   0.007 78);
+  --s3:      oklch(80%   0.008 78);
+
+  --border:  oklch(0% 0 0 / 12%);
+  --bhi:     oklch(0% 0 0 / 22%);
+
+  --text:    oklch(13% 0.013 78);
+  --muted:   oklch(45% 0.010 76);
+  --muted2:  oklch(30% 0.010 76);
+
+  --amber-bg:   oklch(67% 0.17 72 / 14%);
+  --amber-glow: oklch(67% 0.17 72 / 24%);
+
+  --nav-bg:  oklch(98% 0.005 80 / 92%);
+}
+
+/* Dark-mode body vignette is overpowering on a light bg — soften it. */
+:root[data-theme="light"] body::before {
+  background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 50%, oklch(0% 0 0 / 8%) 100%);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, oklch(0% 0 0 / 40%) 100%);
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+}
+
+.nav, .board-wrap, .footer { position: relative; z-index: 2; }
+
+
+/* ── NAV ──────────────────────────────────────── */
+.nav {
+  height: 52px;
+  display: flex; align-items: center;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--nav-bg);
+  backdrop-filter: blur(14px);
+  -webkit-app-region: drag;
+}
+
+.logo { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+.logo-mark {
+  width: 26px; height: 26px;
+  border: 1.5px solid var(--amber);
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px; font-weight: 900;
+  color: var(--amber);
+}
+.logo-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 17px; font-weight: 900;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text);
+}
+
+.sep {
+  width: 1px; height: 18px;
+  background: var(--border);
+  margin: 0 18px; flex-shrink: 0;
+}
+
+.live-status { display: flex; align-items: center; gap: 7px; font-size: 10px; white-space: nowrap; flex-shrink: 0; }
+.live-pip {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 6px var(--amber);
+  flex-shrink: 0;
+  animation: pip 2.2s ease-in-out infinite;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.live-pip.warn { background: var(--warn); box-shadow: 0 0 6px var(--warn); animation: none; }
+@keyframes pip {
+  0%,100% { opacity: 1; }
+  50%      { opacity: 0.4; box-shadow: 0 0 2px var(--amber); }
+}
+.live-label  { color: var(--muted2); }
+.live-device { color: var(--amber); font-weight: 700; }
+
+.nav-right {
+  margin-left: auto; display: flex; align-items: center; gap: 12px;
+  -webkit-app-region: no-drag;
+}
+
+.vol-row { display: flex; align-items: center; gap: 7px; }
+.vol-lbl { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.vol-num { font-size: 10px; color: var(--amber); width: 22px; text-align: right; }
+
+input[type=range] {
+  -webkit-appearance: none;
+  width: 72px; height: 2px;
+  background: var(--muted); border-radius: 2px;
+  cursor: pointer; outline: none;
+  -webkit-app-region: no-drag;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px; height: 10px;
+  background: var(--amber); border-radius: 50%;
+  transition: box-shadow 0.12s;
+}
+input[type=range]::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 0 3px oklch(67% 0.17 72 / 22%);
+}
+
+.icon-btn {
+  font-size: 14px; color: var(--muted2);
+  cursor: pointer; padding: 4px;
+  transition: color 0.12s; line-height: 1;
+  user-select: none;
+  -webkit-app-region: no-drag;
+}
+.icon-btn:hover { color: var(--text); }
+
+
+/* ── BOARD ─────────────────────────────────────── */
+.board-wrap {
+  flex: 1; min-height: 0;
+  padding: 16px 20px 0;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+.board-head {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px; flex-shrink: 0;
+}
+.board-lbl {
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--muted); white-space: nowrap;
+}
+.board-line { flex: 1; height: 1px; background: var(--border); }
+.board-hint { font-size: 9px; color: var(--muted); white-space: nowrap; }
+
+.board { display: flex; flex-direction: column; gap: 16px; flex: 1; align-content: start; }
+.row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+
+
+/* ── TILE ───────────────────────────────────────── */
+.sb {
+  position: relative;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-bottom: 3px solid var(--muted);
+  border-radius: 5px;
+  padding: 12px 10px 22px;
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 5px;
+  user-select: none;
+  overflow: hidden;
+  transition: background 0.1s, border-color 0.1s, box-shadow 0.14s;
+}
+.sb:hover {
+  background: var(--s2);
+  border-color: var(--bhi);
+  border-bottom-color: var(--muted2);
+  box-shadow: 0 4px 20px oklch(0% 0 0 / 35%);
+}
+.sb:active {
+  transform: translateY(2px);
+  border-bottom-width: 1px;
+  background: var(--s2);
+}
+
+.sb.fired { animation: keytap 0.22s ease-out; }
+@keyframes keytap {
+  0%   { transform: translateY(2px); border-bottom-width: 1px; }
+  60%  { transform: translateY(-1px); }
+  100% { transform: translateY(0); }
+}
+
+.sb.lit {
+  border: 1px solid var(--amber-d);
+  border-bottom: 3px solid var(--amber);
+  background: var(--amber-bg);
+  box-shadow:
+    0 0 0 1px oklch(54% 0.15 72 / 60%),
+    0 0 24px var(--amber-glow);
+}
+
+.sb-key {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 42px; font-weight: 900; line-height: 1;
+  color: var(--muted); letter-spacing: -0.5px;
+  transition: color 0.12s, text-shadow 0.12s;
+}
+.sb:hover .sb-key { color: var(--muted2); }
+.sb.lit   .sb-key {
+  color: var(--amber);
+  text-shadow: 0 0 18px oklch(67% 0.17 72 / 50%);
+}
+
+.sb-div { width: 100%; height: 1px; background: var(--border); }
+
+.sb-bottom {
+  display: flex; align-items: center; gap: 6px;
+  width: 100%;
+}
+.sb-emoji {
+  font-size: 14px; line-height: 1; flex-shrink: 0;
+  filter: saturate(0.4);
+  transition: filter 0.12s;
+}
+.sb:hover .sb-emoji { filter: saturate(0.75); }
+.sb.lit   .sb-emoji { filter: saturate(1); }
+
+.sb-name {
+  font-size: 8.5px; font-weight: 700;
+  color: var(--muted2); line-height: 1.25;
+  text-transform: uppercase; letter-spacing: 0.3px;
+  flex: 1; overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  transition: color 0.12s;
+}
+.sb:hover .sb-name { color: var(--text); }
+.sb.lit   .sb-name { color: var(--amber); }
+
+.sb-count {
+  font-size: 8px; color: var(--muted); flex-shrink: 0;
+  transition: color 0.12s;
+}
+.sb.lit .sb-count { color: var(--amber); }
+
+.sb-bar {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  overflow: hidden;
+}
+.sb-bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--amber);
+  border-radius: 0;
+}
+.sb.playing .sb-bar-fill {
+  animation: prog 1.8s ease-out forwards;
+}
+@keyframes prog {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+
+.sb.empty {
+  border-style: dashed;
+  border-color: var(--border);
+  border-bottom: 2px dashed var(--border);
+  cursor: default;
+  opacity: 0.45;
+  pointer-events: none;
+}
+.sb.empty .sb-key {
+  font-size: 28px;
+  color: var(--muted);
+}
+.sb.empty .sb-name {
+  font-size: 9px; color: var(--muted); font-weight: 400;
+  text-transform: lowercase; letter-spacing: 0;
+  font-style: italic;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb.fired       { animation: none; }
+  .sb.playing .sb-bar-fill { animation: none; width: 100%; }
+  .live-pip       { animation: none; }
+  .ripple         { display: none; }
+  .toast          { transition: none; }
+}
+
+
+/* ── FOOTER ─────────────────────────────────────── */
+.footer {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 20px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0; margin-top: 14px;
+  background: oklch(7.5% 0.006 75 / 82%);
+  backdrop-filter: blur(14px);
+}
+
+.out-chip {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10px; color: var(--muted2);
+  border: 1px solid var(--border); border-radius: 4px;
+  padding: 5px 10px; cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+  flex-shrink: 0;
+}
+.out-chip:hover { border-color: var(--bhi); color: var(--text); }
+.out-device { color: var(--amber); font-weight: 700; }
+
+.spacer { flex: 1; }
+
+.sess-stat {
+  font-size: 9px; color: var(--muted);
+  display: flex; align-items: center; gap: 4px;
+  white-space: nowrap;
+}
+.sess-stat b { color: var(--muted2); font-weight: 600; }
+
+.btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+  border: none; border-radius: 3px;
+  padding: 6px 12px; cursor: pointer;
+  display: flex; align-items: center; gap: 4px;
+  text-transform: uppercase;
+  transition: opacity 0.12s, transform 0.08s, box-shadow 0.12s;
+  flex-shrink: 0;
+}
+.btn:hover  { transform: translateY(-1px); }
+.btn:active { transform: scale(0.97); }
+
+.btn-ghost {
+  background: var(--s1); border: 1px solid var(--border); color: var(--muted2);
+}
+.btn-ghost:hover { border-color: var(--bhi); color: var(--text); }
+
+.btn-primary {
+  background: var(--amber);
+  color: oklch(10% 0.01 75);
+  font-weight: 900; letter-spacing: 0.8px;
+}
+.btn-primary:hover { box-shadow: 0 0 20px oklch(67% 0.17 72 / 32%); }
+
+
+/* ── RIPPLE ─────────────────────────────────────── */
+.ripple {
+  position: fixed; border-radius: 50%; pointer-events: none;
+  transform: translate(-50%, -50%) scale(0);
+  animation: rip 0.5s ease-out forwards;
+  z-index: 9999;
+  width: 56px; height: 56px;
+  background: oklch(67% 0.17 72 / 16%);
+}
+@keyframes rip { to { transform: translate(-50%, -50%) scale(8); opacity: 0; } }
+
+
+/* ── TOAST ──────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 58px; left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  background: var(--s3); border: 1px solid var(--bhi);
+  border-radius: 4px; padding: 6px 14px;
+  font-size: 10px; color: var(--text);
+  opacity: 0; transition: opacity 0.18s, transform 0.18s;
+  pointer-events: none; white-space: nowrap; z-index: 999;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── ONBOARDING ─────────────────────────────── */
+.onboard-overlay {
+  position: fixed; inset: 0; z-index: 999;
+  background: oklch(0% 0 0 / 78%);
+  backdrop-filter: blur(8px);
+  display: none;
+  align-items: center; justify-content: center;
+  -webkit-app-region: no-drag;
+}
+.onboard-overlay.show { display: flex; }
+
+.onboard-card {
+  width: 460px; max-width: 92%;
+  background: var(--s2);
+  border: 1px solid var(--bhi);
+  border-radius: 6px;
+  padding: 26px 28px 20px;
+  box-shadow: 0 24px 60px oklch(0% 0 0 / 60%);
+}
+.onboard-step-num {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px; font-weight: 900; letter-spacing: 2.5px;
+  color: var(--amber); text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.onboard-h {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 26px; font-weight: 900; letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text); margin-bottom: 12px; line-height: 1.05;
+}
+.onboard-body {
+  font-size: 11px; line-height: 1.6;
+  color: var(--muted2); margin-bottom: 18px;
+}
+.onboard-body a { color: var(--amber); text-decoration: none; }
+.onboard-body a:hover { text-decoration: underline; }
+.onboard-body code {
+  font-family: 'IBM Plex Mono', monospace;
+  background: var(--s3); padding: 1px 6px; border-radius: 3px;
+  font-size: 10px;
+}
+
+.onboard-dots {
+  display: flex; gap: 6px; align-items: center;
+}
+.onboard-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--bhi);
+  transition: background 0.12s, width 0.12s;
+}
+.onboard-dot.active { background: var(--amber); width: 18px; border-radius: 3px; }
+
+.onboard-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 6px;
+}
+.onboard-btns { display: flex; gap: 8px; }
+.onboard-btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 7px 14px; border-radius: 3px; cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--s1); color: var(--muted2);
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.onboard-btn:hover { color: var(--text); border-color: var(--bhi); }
+.onboard-btn.primary {
+  background: var(--amber); color: oklch(10% 0.01 75);
+  border-color: var(--amber); font-weight: 900;
+}
+.onboard-btn.primary:hover { box-shadow: 0 0 18px var(--amber-glow); }
+</style>
+<script>(function(){var t=localStorage.getItem('mb-theme')||'dark';document.documentElement.setAttribute('data-theme',t==='system'?(window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):t);})()</script>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="logo">
+    <div class="logo-mark">MB</div>
+    <div class="logo-name">MeetingBoost</div>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="live-status">
+    <div class="live-pip" id="livePip"></div>
+    <span class="live-device" id="liveDevice">BlackHole 2ch</span>
+  </div>
+
+  <div class="nav-right">
+    <div class="sep"></div>
+    <div class="vol-row">
+      <span class="vol-lbl">Vol</span>
+      <input type="range" id="volSlider" min="0" max="100" value="80"
+        oninput="handleVolume(this)">
+      <span class="vol-num" id="vn">80</span>
+    </div>
+    <div class="sep"></div>
+    <div class="icon-btn" title="Sound Packs" onclick="window.electronAPI?.openPacks()">≡</div>
+    <div class="icon-btn" title="Settings"    onclick="window.electronAPI?.openSettings()">⚙</div>
+  </div>
+</nav>
+
+<!-- BOARD -->
+<main class="board-wrap">
+  <div class="board-head">
+    <span class="board-lbl">Reaction Board</span>
+    <div class="board-line"></div>
+    <span class="board-hint">15 slots · key or click</span>
+  </div>
+
+  <div class="board">
+
+    <!-- ROW 1: Q W E R T -->
+    <div class="row" id="row1">
+      <div class="sb empty" data-key="q" onclick="fire(this,event)"><div class="sb-key">Q</div><div class="sb-div"></div><div class="sb-bottom"><div class="sb-name">—</div><div class="sb-count">×0</div></div><div class="sb-bar"><div class="sb-bar-fill"></div></div></div>
+      <div class="sb empty" data-key="w" onclick="fire(this,event)"><div class="sb-key">W</div><div class="sb-div"></div><div class="sb-bottom"><div class="sb-name">—</div><div class="sb-count">×0</div></div><div class="sb-bar"><div class="sb-bar-fill"></div></div></div>
+      <div class="sb empty" data-key="e" onclick="fire(this,event)"><div class="sb-key">E</div><div class="sb-div"></div><div class="sb-bottom"><div class="sb-name">—</div><div class="sb-count">×0</div></div><div class="sb-bar"><div class="sb-bar-fill"></div></div></div>
+      <div class="sb empty" data-key="r" onclick="fire(this,event)"><div class="sb-key">R</div><div class="sb-div"></div><div class="sb-bottom"><div class="sb-name">—</div><div class="sb-count">×0</div></div><div class="sb-bar"><div class="sb-bar-fill"></div></div></div>
+      <div class="sb empty" data-key="t" onclick="fire(this,event)"><div class="sb-key">T</div><div class="sb-div"></div><div class="sb-bottom"><div class="sb-name">—</div><div class="sb-count">×0</div></div><div class="sb-bar"><div class="sb-bar-fill"></div></div></div>
+    </div>
+
+    <!-- ROW 2: A S D F G -->
+    <div class="row" id="row2">
+      <div class="sb empty" data-key="a" onclick="fire(this,event)"><div class="sb-key">A</div><div class="sb-div"></div><div class="sb-bottom"><div class="sb-name">—</div><div class="sb-count">×0</div></div><div class="sb-bar"><div class="sb-bar-fill"></div></div></div>
+      <div class="sb empty" data-key="s" onclick="fire(this,event)"><div class="sb-key">S</div><div class="sb-div"></div><div class="sb-bottom"><div class="sb-name">—</div><div class="sb-count">×0</div></div><div class="sb-bar"><div class="sb-bar-fill"></div></div></div>
+      <div class="sb empty" data-key="d" onclick="fire(this,event)"><div class="sb-key">D</div><div class="sb-div"></div><div class="sb-bottom"><div class="sb-name">—</div><div class="sb-count">×0</div></div><div class="sb-bar"><div class="sb-bar-fill"></div></div></div>
+      <div class="sb empty" data-key="f" onclick="fire(this,event)"><div class="sb-key">F</div><div class="sb-div"></div><div class="sb-bottom"><div class="sb-name">—</div><div class="sb-count">×0</div></div><div class="sb-bar"><div class="sb-bar-fill"></div></div></div>
+      <div class="sb empty" data-key="g" onclick="fire(this,event)"><div class="sb-key">G</div><div class="sb-div"></div><div class="sb-bottom"><div class="sb-name">—</div><div class="sb-count">×0</div></div><div class="sb-bar"><div class="sb-bar-fill"></div></div></div>
+    </div>
+
+    <!-- ROW 3: Z X C V B -->
+    <div class="row" id="row3">
+      <div class="sb empty" data-key="z" onclick="fire(this,event)"><div class="sb-key">Z</div><div class="sb-div"></div><div class="sb-bottom"><div class="sb-name">—</div><div class="sb-count">×0</div></div><div class="sb-bar"><div class="sb-bar-fill"></div></div></div>
+      <div class="sb empty" data-key="x" onclick="fire(this,event)"><div class="sb-key">X</div><div class="sb-div"></div><div class="sb-bottom"><div class="sb-name">—</div><div class="sb-count">×0</div></div><div class="sb-bar"><div class="sb-bar-fill"></div></div></div>
+      <div class="sb empty" data-key="c" onclick="fire(this,event)"><div class="sb-key">C</div><div class="sb-div"></div><div class="sb-bottom"><div class="sb-name">—</div><div class="sb-count">×0</div></div><div class="sb-bar"><div class="sb-bar-fill"></div></div></div>
+      <div class="sb empty" data-key="v" onclick="fire(this,event)"><div class="sb-key">V</div><div class="sb-div"></div><div class="sb-bottom"><div class="sb-name">—</div><div class="sb-count">×0</div></div><div class="sb-bar"><div class="sb-bar-fill"></div></div></div>
+      <div class="sb empty" data-key="b" onclick="fire(this,event)"><div class="sb-key">B</div><div class="sb-div"></div><div class="sb-bottom"><div class="sb-name">—</div><div class="sb-count">×0</div></div><div class="sb-bar"><div class="sb-bar-fill"></div></div></div>
+    </div>
+
+  </div>
+</main>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="out-chip" onclick="window.electronAPI?.openSettings()">
+    Output ·&nbsp;<span class="out-device">BlackHole 2ch</span>&nbsp;▾
+  </div>
+  <div class="spacer"></div>
+  <div class="sess-stat">session <b id="sc">0</b> fired</div>
+  <button class="btn btn-ghost"   onclick="window.electronAPI?.openPacks()">Packs</button>
+  <button class="btn btn-primary" onclick="window.electronAPI?.openAddSound()">+ Add Sound</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ── ONBOARDING OVERLAY ──────────────────────────────────────────────── -->
+<div class="onboard-overlay" id="onboardOverlay" role="dialog" aria-modal="true" aria-labelledby="onboardH">
+  <div class="onboard-card">
+    <div class="onboard-step-num" id="onboardNum">Step 1 of 3</div>
+    <div class="onboard-h" id="onboardH"></div>
+    <div class="onboard-body" id="onboardBody"></div>
+    <div class="onboard-foot">
+      <div class="onboard-dots" id="onboardDots">
+        <div class="onboard-dot active"></div>
+        <div class="onboard-dot"></div>
+        <div class="onboard-dot"></div>
+      </div>
+      <div class="onboard-btns">
+        <button class="onboard-btn"         id="onboardSkip" onclick="onboardSkip()">Skip</button>
+        <button class="onboard-btn primary" id="onboardNext" onclick="onboardNext()">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let packs     = [];
+  let activePack = null;
+  let soundUrls  = {};   // key -> resolved file:// URL for active pack
+  let counts    = {};
+  let session   = 0;
+  let toastTmr;
+  let volume    = 0.8;
+
+  // Build keyMap after pack loads (only non-empty tiles)
+  const keyMap = {};
+
+  // ── Pack loading ─────────────────────────────────
+  // The renderer used to fetch('packs.json') and join file paths against
+  // 'sounds/' relative to the HTML. That broke for user content in packaged
+  // builds (asar is read-only). Now main process owns merging bundled + user
+  // packs and resolves each entry to an absolute file:// URL.
+  async function loadPackData() {
+    if (window.electronAPI?.getPacks) {
+      packs = await window.electronAPI.getPacks();
+    } else {
+      // Browser preview fallback (no Electron context)
+      const resp = await fetch('packs.json');
+      const raw  = await resp.json();
+      packs = raw.map(p => ({
+        ...p,
+        keys: Object.fromEntries(Object.entries(p.keys).map(([k, e]) =>
+          [k, { ...e, url: `sounds/${e.file}` }])),
+      }));
+    }
+  }
+
+  function applyPack(packId) {
+    const pack = packs.find(p => p.id === packId) || packs[0];
+    if (!pack) return;
+    activePack = pack;
+    soundUrls  = {};
+
+    document.querySelectorAll('.sb[data-key]').forEach(el => {
+      const key   = el.dataset.key;
+      const entry = pack.keys[key];
+      if (entry) {
+        el.classList.remove('empty');
+        el.querySelector('.sb-name').textContent = entry.label;
+        soundUrls[key] = entry.url;
+        keyMap[key] = el;
+        if (!counts[key]) counts[key] = 0;
+      } else {
+        el.classList.add('empty');
+        delete keyMap[key];
+      }
+    });
+
+    document.querySelector('.board-lbl').textContent = pack.name;
+    showToast(pack.name);
+  }
+
+  // ── Audio ─────────────────────────────────────────
+  // Single-voice model: only one sound plays at a time. Pressing the same
+  // key again stops it (toggle); pressing a different key stops the current
+  // one and starts the new one. Esc hard-stops anything playing.
+  let outputDeviceId = 'default';
+  let currentAudio   = null;
+  let currentKey     = null;
+
+  function stopCurrent() {
+    if (currentAudio) {
+      try { currentAudio.pause(); }       catch {}
+      try { currentAudio.currentTime = 0; } catch {}
+      currentAudio = null;
+    }
+    if (currentKey && keyMap[currentKey]) {
+      keyMap[currentKey].classList.remove('lit', 'playing');
+    }
+    currentKey = null;
+  }
+
+  function playSound(key) {
+    const url = soundUrls[key];
+    if (!url) return false;
+
+    // Toggle off when the same key is hit while still playing.
+    if (currentKey === key && currentAudio && !currentAudio.paused) {
+      stopCurrent();
+      return false;
+    }
+    stopCurrent();
+
+    const el = keyMap[key];
+    if (!el) return false;
+
+    // Restart the lit + progress-bar visuals — driven off audio events below
+    // rather than fixed timeouts, so the indicator matches actual playback.
+    el.classList.remove('lit', 'playing');
+    void el.offsetWidth;
+    el.classList.add('lit', 'playing');
+    const fill = el.querySelector('.sb-bar-fill');
+    if (fill) {
+      fill.style.animation = 'none';
+      void fill.offsetWidth;
+      fill.style.animation = '';
+    }
+
+    const audio = new Audio(url);
+    audio.volume = volume;
+    const cleanup = () => { if (currentAudio === audio) stopCurrent(); };
+    audio.addEventListener('ended', cleanup);
+    audio.addEventListener('error', cleanup);
+
+    // Route to BlackHole (or whatever output device is configured) BEFORE
+    // play() — setSinkId is async, and short sounds can otherwise finish
+    // before the sink swap lands, leaving the audience hearing nothing.
+    const start = () => audio.play().catch(err => {
+      console.error('[MeetingBoost] audio.play() failed:', err);
+      cleanup();
+    });
+    if (outputDeviceId && outputDeviceId !== 'default' && typeof audio.setSinkId === 'function') {
+      audio.setSinkId(outputDeviceId)
+        .then(start)
+        .catch(err => {
+          console.error('[MeetingBoost] setSinkId(' + outputDeviceId + ') failed:', err);
+          start();
+        });
+    } else {
+      start();
+    }
+
+    currentAudio = audio;
+    currentKey   = key;
+    return true;
+  }
+
+  // ── Right-click pad to clear binding ──────────────
+  // Bound pads only — empty pads have nothing to remove. Routes through
+  // packUnbindKey, which clone-on-writes bundled packs so clearing Classics
+  // creates a user-side override rather than no-oping silently.
+  document.addEventListener('contextmenu', async e => {
+    const el = e.target.closest?.('.sb[data-key]');
+    if (!el || el.classList.contains('empty')) return;
+    e.preventDefault();
+    const key  = el.dataset.key;
+    const name = el.querySelector('.sb-name')?.textContent || key.toUpperCase();
+    if (!confirm(`Clear "${name}" from ${activePack?.name || 'this pack'}?`)) return;
+    if (currentKey === key) stopCurrent();
+    const res = await window.electronAPI?.packUnbindKey?.(activePack.id, key);
+    if (res?.ok) {
+      showToast(res.changed ? `Cleared ${key.toUpperCase()}` : `${key.toUpperCase()} was already empty`);
+    } else {
+      showToast(res?.error || 'Could not clear pad');
+    }
+  });
+
+  // ── Keyboard ──────────────────────────────────────
+  // Bare letter presses fire sounds. Anything with a modifier (Cmd/Ctrl/Alt)
+  // belongs to the OS / app menu — Cmd+Q must quit, not play the Q sound.
+  document.addEventListener('keydown', e => {
+    if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'Escape') { e.preventDefault(); stopCurrent(); return; }
+    const el = keyMap[e.key.toLowerCase()];
+    if (el) { e.preventDefault(); fire(el, null); }
+  });
+
+  // ── Volume ────────────────────────────────────────
+  function handleVolume(el) {
+    volume = el.value / 100;
+    document.getElementById('vn').textContent = el.value;
+    window.electronAPI?.setVolume(+el.value);
+  }
+
+  // ── Fire ──────────────────────────────────────────
+  function fire(el, evt) {
+    if (el.classList.contains('empty')) return;
+
+    // Always run the keytap "press" feedback — happens whether the press
+    // starts a sound or toggles one off. lit + playing are owned by
+    // playSound() now, tied to actual audio start/end.
+    el.classList.remove('fired');
+    void el.offsetWidth;
+    el.classList.add('fired');
+
+    const key = el.dataset.key;
+    counts[key] = (counts[key] || 0) + 1;
+    el.querySelector('.sb-count').textContent = '×' + counts[key];
+
+    session++;
+    document.getElementById('sc').textContent = session;
+
+    playSound(key);
+
+    const rect = el.getBoundingClientRect();
+    const cx = evt ? evt.clientX : rect.left + rect.width  / 2;
+    const cy = evt ? evt.clientY : rect.top  + rect.height / 2;
+    const r = document.createElement('div');
+    r.className = 'ripple';
+    r.style.left = cx + 'px';
+    r.style.top  = cy + 'px';
+    document.body.appendChild(r);
+    r.addEventListener('animationend', () => r.remove());
+  }
+
+  // ── Toast ─────────────────────────────────────────
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTmr);
+    toastTmr = setTimeout(() => t.classList.remove('show'), 1900);
+  }
+
+  // ── IPC: pack switched from packs screen ──────────
+  // Reload pack data on every selection — the pack contents may have changed
+  // (drag-drop binding, new recording added) since we last fetched.
+  window.electronAPI?.onPackSelected?.(async (_e, packId) => {
+    await loadPackData();
+    applyPack(packId);
+  });
+
+  window.electronAPI?.onRecordingsChanged?.(async () => {
+    if (!activePack) return;
+    await loadPackData();
+    applyPack(activePack.id);
+  });
+
+  // ── IPC: live theme change from settings ──────────
+  window.electronAPI?.onThemeChanged?.((_e, mode) => {
+    localStorage.setItem('mb-theme', mode);
+    const resolved = mode === 'system'
+      ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+      : mode;
+    document.documentElement.setAttribute('data-theme', resolved);
+  });
+
+  // ── IPC: global keyboard event from main process ──
+  // Fires when "Global Keyboard Capture" is enabled in Settings, even when
+  // MeetingBoost is not the focused application.
+  window.electronAPI?.onGlobalKey?.((_e, key) => {
+    const el = keyMap[key];
+    if (el && !el.classList.contains('empty')) fire(el, null);
+  });
+
+  // ── IPC: live audio-output device change ──────────
+  window.electronAPI?.onOutputDeviceChanged?.((_e, deviceId) => {
+    outputDeviceId = deviceId || 'default';
+  });
+
+  // ── Onboarding ────────────────────────────────────
+  const ONBOARD_STEPS = [
+    {
+      h: 'Welcome to MeetingBoost',
+      body: `MeetingBoost turns your keyboard into a soundboard — press
+        <code>Q</code> for a rimshot, <code>W</code> for a sad trombone,
+        and so on across the alphabet. The whole grid you see behind this
+        dialog is live and ready to fire.<br><br>
+        Three short steps and you'll be ready.`,
+    },
+    {
+      h: 'Route audio into your meetings',
+      body: `MeetingBoost plays sounds through your selected output device.
+        To inject them <em>into</em> Zoom / Meet / Teams calls, install the
+        free open-source virtual audio driver
+        <a href="https://existential.audio/blackhole/" target="_blank" rel="noopener">BlackHole 2ch</a>
+        and set it as your meeting's microphone source.<br><br>
+        You can change the output device any time in
+        <code>Settings → Audio</code>.`,
+    },
+    {
+      h: 'Fire sounds from any app',
+      body: `For sounds to trigger when MeetingBoost <em>isn't</em> the
+        focused window, grant macOS Accessibility permission. We'll prompt
+        you the first time you toggle <em>Global Keyboard Capture</em> in
+        <code>Settings → Keyboard</code>.<br><br>
+        You're done — close this dialog and start mashing keys.`,
+    },
+  ];
+
+  let onboardIdx = 0;
+
+  function showOnboard(idx) {
+    onboardIdx = idx;
+    const step = ONBOARD_STEPS[idx];
+    document.getElementById('onboardNum').textContent  = `Step ${idx + 1} of ${ONBOARD_STEPS.length}`;
+    document.getElementById('onboardH').textContent    = step.h;
+    document.getElementById('onboardBody').innerHTML   = step.body;
+    document.querySelectorAll('#onboardDots .onboard-dot').forEach((d, i) => {
+      d.classList.toggle('active', i === idx);
+    });
+    const nextBtn = document.getElementById('onboardNext');
+    nextBtn.textContent = idx === ONBOARD_STEPS.length - 1 ? 'Get started' : 'Next →';
+    document.getElementById('onboardSkip').style.visibility =
+      idx === ONBOARD_STEPS.length - 1 ? 'hidden' : 'visible';
+    document.getElementById('onboardOverlay').classList.add('show');
+  }
+
+  function onboardNext() {
+    if (onboardIdx < ONBOARD_STEPS.length - 1) showOnboard(onboardIdx + 1);
+    else onboardFinish();
+  }
+  function onboardSkip()   { onboardFinish(); }
+  function onboardFinish() {
+    document.getElementById('onboardOverlay').classList.remove('show');
+    window.electronAPI?.saveSetting('onboardingComplete', true);
+  }
+
+  // ── Init ──────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', async () => {
+    await loadPackData();
+
+    const [savedVol, savedPack, savedDevice, onboarded] = await Promise.all([
+      window.electronAPI?.getSetting('volume',             80),
+      window.electronAPI?.getSetting('activePack',         'classics'),
+      window.electronAPI?.getSetting('outputDeviceId',     'default'),
+      window.electronAPI?.getSetting('onboardingComplete', false),
+    ]);
+
+    if (savedVol != null) {
+      const v = +savedVol;
+      volume = v / 100;
+      document.getElementById('volSlider').value = v;
+      document.getElementById('vn').textContent   = v;
+    }
+
+    outputDeviceId = savedDevice || 'default';
+
+    applyPack(savedPack || 'classics');
+
+    if (!onboarded) showOnboard(0);
+  });
+</script>
+</body>
+</html>

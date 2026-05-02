@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- V8 needs these to JIT-compile JavaScript under the hardened runtime. -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+
+  <!-- Microphone access for the Voice Recording feature. -->
+  <key>com.apple.security.device.audio-input</key>
+  <true/>
+
+  <!-- Outbound network for yt-dlp to fetch YouTube metadata + audio. -->
+  <key>com.apple.security.network.client</key>
+  <true/>
+
+  <!-- Allow the helper processes to do everything the main process can.
+       Required by Electron’s multi-process architecture. -->
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+</dict>
+</plist>

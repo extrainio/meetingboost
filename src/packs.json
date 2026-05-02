@@ -1,0 +1,127 @@
+[
+  {
+    "id": "classics",
+    "name": "Classics",
+    "description": "Timeless meeting reactions",
+    "keys": {
+      "q": {
+        "label": "Rimshot",
+        "file": "classics/rimshot.mp3"
+      },
+      "w": {
+        "label": "Sad Trombone",
+        "file": "classics/sad-trombone.mp3"
+      },
+      "e": {
+        "label": "Airhorn",
+        "file": "classics/airhorn.mp3"
+      },
+      "r": {
+        "label": "Applause",
+        "file": "classics/applause.mp3"
+      },
+      "t": {
+        "label": "Crickets",
+        "file": "classics/crickets.mp3"
+      },
+      "a": {
+        "label": "Ding!",
+        "file": "classics/ding.mp3"
+      },
+      "s": {
+        "label": "Bruh",
+        "file": "classics/bruh.mp3"
+      },
+      "d": {
+        "label": "Fail Trumpet",
+        "file": "classics/fail-trumpet.mp3"
+      },
+      "f": {
+        "label": "Evil Laugh",
+        "file": "classics/evil-laugh.mp3"
+      },
+      "g": {
+        "label": "Booing",
+        "file": "classics/booing.mp3"
+      },
+      "z": {
+        "label": "To Be…",
+        "file": "classics/to-be-continued.mp3"
+      }
+    }
+  },
+  {
+    "id": "corporate",
+    "name": "Corporate Warfare",
+    "description": "Office survival kit",
+    "keys": {
+      "q": {
+        "label": "Synergy!",
+        "file": "corporate/synergy-sting.mp3"
+      },
+      "w": {
+        "label": "Spy Mode",
+        "file": "corporate/spy-theme.mp3"
+      },
+      "e": {
+        "label": "Dial-Up",
+        "file": "corporate/modem.mp3"
+      },
+      "r": {
+        "label": "WRONG",
+        "file": "corporate/buzzer.mp3"
+      },
+      "t": {
+        "label": "Sonar",
+        "file": "corporate/sonar-ping.mp3"
+      },
+      "a": {
+        "label": "LET'S GO",
+        "file": "corporate/lets-go.mp3"
+      },
+      "s": {
+        "label": "Ping",
+        "file": "corporate/notification.mp3"
+      },
+      "d": {
+        "label": "Bozo Alert",
+        "file": "corporate/clown-horn.mp3"
+      }
+    }
+  },
+  {
+    "id": "hype",
+    "name": "Hype Machine",
+    "description": "Maximum energy",
+    "keys": {
+      "q": {
+        "label": "Air Horn",
+        "file": "hype/air-horn.mp3"
+      },
+      "w": {
+        "label": "Power Up",
+        "file": "hype/power-up.mp3"
+      },
+      "e": {
+        "label": "Metal Riff",
+        "file": "hype/guitar-riff.mp3"
+      },
+      "r": {
+        "label": "Party Horn",
+        "file": "hype/party-horn.mp3"
+      },
+      "t": {
+        "label": "Vine Boom",
+        "file": "hype/vine-boom.mp3"
+      },
+      "a": {
+        "label": "Achievement",
+        "file": "hype/achievement.mp3"
+      },
+      "s": {
+        "label": "Fanfare",
+        "file": "hype/royal-fanfare.mp3"
+      }
+    }
+  }
+]

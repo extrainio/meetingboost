@@ -1,0 +1,65 @@
+# Node / build
+node_modules/
+package-lock.json.backup
+
+# TypeScript output (compiled in-place beside the .ts source)
+main.js
+main.js.map
+preload.js
+preload.js.map
+*.tsbuildinfo
+
+# Electron-builder release artefacts
+release/
+*.dmg
+*.dmg.blockmap
+*.zip
+*.zip.blockmap
+
+# Generated icon files (regenerate with `make icon-from-svg`)
+assets/icon.icns
+assets/icon.png
+assets/icon.iconset/
+
+# macOS
+.DS_Store
+*.swp
+*.swo
+
+# Ad-hoc screenshots at the project root (dev artefacts, not docs)
+/manager-v2.png
+/packs-v1.png
+/packs-v1-fixed.png
+/settings-about.png
+/settings-audio.png
+/settings-keyboard.png
+/v6-default.png
+/v6-fixed.png
+/v6-lit.png
+
+# Test caches
+.pytest_cache/
+__pycache__/
+*.pyc
+
+# Editor / IDE
+.vscode/
+.idea/
+*.iml
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# Local Claude / agent state
+.claude/
+.playwright-mcp/
+.superpowers/
+
+# Test reports
+test-results/
+playwright-report/
+
+# User-recorded custom sounds (the Custom pack is created on first save)
+src/sounds/custom/
