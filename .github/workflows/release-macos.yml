@@ -54,16 +54,43 @@ jobs:
       - name: Rebuild example .mbpack
         run: make example-pack
 
-      - name: Build & package (DMG + ZIP, arm64 + x64)
+      # Detect once whether signing secrets are present. We can't put env
+      # blocks behind an `if:` and an empty `${{ secrets.CSC_LINK }}` is the
+      # string '' (not unset), which electron-builder mis-interprets as a
+      # file path. So we explicitly export OR unset them in a shell step.
+      - name: Resolve signing mode
+        id: signing
+        env:
+          HAS_CSC: ${{ secrets.CSC_LINK != '' && secrets.CSC_KEY_PASSWORD != '' }}
+        run: |
+          if [ "$HAS_CSC" = "true" ]; then
+            echo "Signing secrets detected — building signed artifacts."
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No signing secrets — building unsigned (ad-hoc) artifacts."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build & package (signed)
+        if: steps.signing.outputs.signed == 'true'
+        run: npm run dist
+        env:
+          GH_TOKEN:                    ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK:                    ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD:            ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID:                    ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID:               ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Build & package (unsigned)
+        if: steps.signing.outputs.signed == 'false'
         run: npm run dist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # electron-builder picks these up automatically when present:
-          CSC_LINK:                  ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD:          ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_ID:                  ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID:             ${{ secrets.APPLE_TEAM_ID }}
+          # Stop electron-builder from trying to find a Developer ID cert in
+          # the runner's empty keychain. Produces an ad-hoc-signed artifact
+          # — fine for internal testing, flagged by Gatekeeper for end users.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
