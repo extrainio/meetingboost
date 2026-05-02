@@ -15,6 +15,7 @@
     "dist": "tsc && electron-builder --mac",
     "dist:dmg": "tsc && electron-builder --mac dmg",
     "dist:dir": "tsc && electron-builder --mac dir",
+    "verify:mac-bundle": "bash scripts/verify-macos-bundle.sh",
     "test": "python3 -m pytest tests/test_sounds.py -v",
     "test:e2e": "tsc && npx playwright test tests/e2e/pack-selection.spec.ts",
     "screenshots": "tsc && npx playwright test tests/e2e/screenshots.spec.ts"
@@ -50,7 +51,8 @@
       "gatekeeperAssess": false,
       "entitlements": "assets/entitlements.mac.plist",
       "entitlementsInherit": "assets/entitlements.mac.plist",
-      "minimumSystemVersion": "13.0"
+      "minimumSystemVersion": "13.0",
+      "notarize": true
     },
     "dmg": {
       "title": "MeetingBoost",

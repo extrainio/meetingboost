@@ -71,6 +71,19 @@ jobs:
             echo "signed=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # When CSC + Apple notary secrets are all present, also require Gatekeeper (spctl) to pass CI.
+      - name: Resolve bundle verification strictness
+        id: verify
+        env:
+          SIGNED: ${{ steps.signing.outputs.signed }}
+          HAS_NOTARY_CREDS: ${{ secrets.APPLE_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
+        run: |
+          if [ "$SIGNED" = "true" ] && [ "$HAS_NOTARY_CREDS" = "true" ]; then
+            echo "require_gatekeeper=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "require_gatekeeper=0" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build & package (signed)
         if: steps.signing.outputs.signed == 'true'
         run: npm run dist
@@ -91,6 +104,11 @@ jobs:
           # the runner's empty keychain. Produces an ad-hoc-signed artifact
           # — fine for internal testing, flagged by Gatekeeper for end users.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Verify macOS app bundle
+        run: bash scripts/verify-macos-bundle.sh
+        env:
+          REQUIRE_GATEKEEPER_PASS: ${{ steps.verify.outputs.require_gatekeeper }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

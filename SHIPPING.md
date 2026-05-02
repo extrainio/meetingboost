@@ -30,6 +30,8 @@ so the diff is clear; everything unchecked is real work.
 - [x] **Version sync** — Settings → About reads `app.getVersion()` instead of a hardcoded string.
 - [x] **First-run onboarding** — 3-step overlay (welcome → BlackHole → Accessibility) on first launch. Persisted via the `onboardingComplete` setting.
 - [x] **Local DMG build verified** — `release/MeetingBoost-1.0.0-beta-arm64.dmg` (99.6 MB, checksum valid). Tray template image, native key-listener helper, and DMG background all bundled correctly.
+- [x] **`mac.notarize: true`** in `package.json#build` — notarization runs when Apple notary credentials are set in CI; skipped otherwise (`SETUP.md`).
+- [x] **`scripts/verify-macos-bundle.sh`** + release workflow verification step (`codesign` deep/strict always; **`spctl` when CSC + all Apple notary secrets are present**).
 
 ---
 
@@ -38,7 +40,7 @@ so the diff is clear; everything unchecked is real work.
 ### Code-signing & notarization (only thing left blocking distribution)
 
 - [ ] **Apple Developer ID certificate** ($99/yr). Without one, downloaders see *"MeetingBoost can't be opened because Apple cannot check it for malicious software"*. Hardened-runtime config and entitlements are already in place — once the cert is installed, `electron-builder` picks it up automatically.
-- [ ] **Notarization credentials in CI**: set `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` as GitHub Action secrets. Add `mac.notarize: true` to `package.json#build`.
+- [ ] **Notarization credentials in CI**: set `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` as GitHub Action secrets (notarization is enabled via `mac.notarize` in `package.json#build`; without these env vars electron-builder skips notarization).
 - [ ] **Test on a clean Mac**: download the notarised DMG, confirm Gatekeeper accepts it without right-click → Open.
 
 ### Remaining feature stubs

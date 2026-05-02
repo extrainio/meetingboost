@@ -1,8 +1,9 @@
 # MeetingBoost — Setup & Troubleshooting
 
-This doc covers the two ship-blocking issues people hit:
+This doc covers ship-blocking setup issues users hit:
+
 1. **Audience can't hear sounds** in Teams/Zoom/Meet (BlackHole routing).
-2. **"The disk image is corrupted"** when the DMG is shipped over Teams.
+2. **DMG / first-run nightmares** (“disk corrupted”, German *„beschädigt“*, Gatekeeper) when the app wasn’t Developer ID-signed and notarized.
 
 ---
 
@@ -99,12 +100,11 @@ awaited *before* `audio.play()`. Failures log to the devtools console
 
 ---
 
-## 2. "The disk image is corrupted" when shipped over Teams
+## 2. "The disk image is corrupted" — or German: *„MeetingBoost ist beschädigt und kann nicht geöffnet werden“*
 
-The bytes are not actually corrupted. What you're seeing is **Gatekeeper's
-deliberately-misleading message for unsigned apps with the quarantine
-attribute** — Apple shows "is damaged / corrupted" instead of the real reason
-("this developer isn't registered with us").
+The bytes are usually not corrupted. macOS commonly uses **“damaged” / German *beschädigt*** when **Gatekeeper rejects the bundle** (failed signature verification, Developer ID absent, missing notarization, or downloaded **quarantine**). Same underlying issue as English *“cannot be opened because Apple cannot verify it”*, not truncated transfers.
+
+Teams / SharePoint can still provoke false **“disk image corrupted”** messages — see **Option B** below.
 
 Verify it's not real corruption:
 ```bash
@@ -116,7 +116,23 @@ shasum -a 256 release/MeetingBoost-1.0.0-beta-arm64.dmg
 Check the current signing state:
 ```bash
 codesign -dv --verbose=4 release/mac-arm64/MeetingBoost.app 2>&1 | grep -E "Signature|TeamIdentifier"
-# Today: Signature=adhoc, TeamIdentifier=not set → unsigned, will be flagged.
+# Unsigned CI builds: Signature=adhoc, TeamIdentifier=not set → Gatekeeper will flag.
+```
+
+**Strict verification + rehearsal** (run after `npm run dist`, or point at `.app` from a mounted DMG):
+
+```bash
+npm run verify:mac-bundle                                    # defaults to release/mac-arm64/MeetingBoost.app
+scripts/verify-macos-bundle.sh '/Volumes/MeetingBoost/MeetingBoost.app'   # DMG-mounted copy
+```
+
+The script runs `codesign --verify --deep --strict`. Optionally set `REQUIRE_GATEKEEPER_PASS=1` to require `spctl -a -vv` (CI does this automatically when CSC + Apple notary secrets are all configured).
+
+Extras by hand:
+
+```bash
+spctl -a -vv /path/to/MeetingBoost.app
+xattr -l /path/to/MeetingBoost.app   # look for com.apple.quarantine → xattr workaround below
 ```
 
 ### Workaround until you have a Developer ID cert
@@ -166,7 +182,7 @@ See `SHIPPING.md` § "Code-signing & notarization":
 1. Buy an Apple Developer ID ($99/yr).
 2. Add `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` to GitHub
    Action secrets.
-3. Set `mac.notarize: true` in `package.json#build`.
+3. `mac.notarize: true` is set in `package.json#build` — notarization runs when Apple secrets are present; without them electron-builder skips it.
 4. Re-build. The DMG will then ship cleanly through Teams without any
    incantations on the recipient's side.
 
@@ -180,5 +196,5 @@ See `SHIPPING.md` § "Code-signing & notarization":
 | Audience hears nothing, mic is right   | Teams noise suppression OFF?                                 |
 | Audience hears nothing, suppression off | Run `./scripts/test-blackhole.sh` — does it report signal?  |
 | You hear nothing yourself              | Configure Multi-Output Device per § 1                        |
-| "Disk image corrupted"                 | App is ad-hoc signed; ship .zip + run `xattr -cr` on recipient side |
+| "Disk image corrupted" / DE *„beschädigt“* | Gatekeeper; see § 2 · `npm run verify:mac-bundle` · ship .zip + `xattr -cr` if unsigned |
 | First-run "MeetingBoost can't be opened" | Right-click app → Open (only required first time on unsigned builds) |
