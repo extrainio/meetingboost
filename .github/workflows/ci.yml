@@ -25,8 +25,10 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      - name: TypeScript compile check
-        run: npx tsc --noEmit
+      - name: TypeScript compile (emit main.js / preload.js)
+        # Real compile — the sound-integrity tests assert main.js/preload.js
+        # exist on disk, so --noEmit would fail those.
+        run: npx tsc
 
       - name: Set up Python
         uses: actions/setup-python@v5
