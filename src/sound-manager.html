@@ -787,7 +787,14 @@ body::after {
       </div>
 
       <div class="ytp-state ytp-import" hidden>
-        <!-- filled in Task 10 -->
+        <div class="ytp-progress-stage" id="ytpProgressStage">Preparing…</div>
+        <progress class="ytp-progress" id="ytpProgress" max="100" value="0"></progress>
+        <div class="ytp-progress-detail" id="ytpProgressDetail"></div>
+        <div class="ytp-error" id="ytpImportError" hidden></div>
+        <div class="ytp-actions">
+          <button class="btn" id="ytpDoneBtn" hidden>Done</button>
+          <button class="btn" id="ytpRetryBtn" hidden>Try again</button>
+        </div>
       </div>
     </section>
 
@@ -1700,6 +1707,102 @@ body::after {
     ytpRows = [];
     ytpUrl.value = '';
     setYtpState('paste');
+  });
+
+  const ytpStage     = document.getElementById('ytpProgressStage');
+  const ytpProgress  = document.getElementById('ytpProgress');
+  const ytpDetail    = document.getElementById('ytpProgressDetail');
+  const ytpImportErr = document.getElementById('ytpImportError');
+  const ytpDoneBtn   = document.getElementById('ytpDoneBtn');
+  const ytpRetryBtn  = document.getElementById('ytpRetryBtn');
+
+  ytpCreateBtn.addEventListener('click', async () => {
+    ytpReviewErr.hidden = true;
+    const sel = selectedYtpRows().slice(0, YTP_MAX_KEYS);
+    if (sel.length === 0) {
+      ytpReviewErr.textContent = 'Select at least one snippet.';
+      ytpReviewErr.hidden = false;
+      return;
+    }
+
+    setYtpState('import');
+    ytpStage.textContent = 'Preparing snippets…';
+    ytpProgress.value = 5;
+    ytpDetail.textContent = '';
+    ytpImportErr.hidden = true;
+    ytpDoneBtn.hidden = true;
+    ytpRetryBtn.hidden = true;
+
+    const detect = window.__ytpLastDetect;
+
+    try {
+      let allPrepared = [];
+      let allFailed   = [];
+
+      if (detect.result.kind === 'chapters') {
+        ytpDetail.textContent = `Cutting ${sel.length} snippet(s)…`;
+        const r = await window.electronAPI.ytPreparePack({
+          url: detect.url,
+          segments: sel.map(s => ({ title: s.title, start: s.start, end: s.end })),
+        });
+        if (!r.ok) throw new Error(r.error);
+        allPrepared = r.prepared;
+        allFailed   = r.failed;
+        ytpProgress.value = 70;
+      } else {
+        // playlist — N downloads, one per video
+        for (let i = 0; i < sel.length; i++) {
+          const s = sel[i];
+          ytpDetail.textContent = `Downloading video ${i + 1} of ${sel.length}: ${s.title}`;
+          ytpProgress.value = 5 + Math.floor((i / sel.length) * 65);
+          const r = await window.electronAPI.ytPreparePack({
+            url: s.perVideoUrl,
+            segments: [{ title: s.title, start: 0, end: s.end || 600 }],
+          });
+          if (!r.ok) {
+            allFailed.push({ title: s.title, error: r.error });
+          } else {
+            allPrepared.push(...r.prepared);
+            allFailed.push(...r.failed);
+          }
+        }
+      }
+
+      if (allPrepared.length === 0) {
+        throw new Error('No snippets could be prepared.\n' +
+          allFailed.map(f => `${f.title}: ${f.error}`).join('\n'));
+      }
+
+      ytpStage.textContent = 'Creating pack…';
+      ytpProgress.value = 85;
+      ytpDetail.textContent = '';
+
+      const create = await window.electronAPI.libraryCreatePackFromClips({
+        url:      detect.url,
+        packName: ytpPackNameInp.value,
+        clips:    allPrepared,
+      });
+      if (!create.ok) throw new Error(create.error);
+
+      ytpProgress.value = 100;
+      ytpStage.textContent = 'Pack created';
+      ytpDetail.textContent =
+        `${create.keysAssigned} keys assigned in pack "${create.finalName}"` +
+        (allFailed.length ? `   (${allFailed.length} failed)` : '');
+      ytpDoneBtn.hidden = false;
+    } catch (e) {
+      ytpImportErr.textContent = e.message || String(e);
+      ytpImportErr.hidden = false;
+      ytpRetryBtn.hidden = false;
+    }
+  });
+
+  ytpDoneBtn.addEventListener('click', () => {
+    // Close Sound Manager — the new pack will appear via packs-changed
+    window.close();
+  });
+  ytpRetryBtn.addEventListener('click', () => {
+    setYtpState('review');
   });
 </script>
 </body>
