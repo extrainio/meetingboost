@@ -311,5 +311,48 @@ class TestDetectSnippetsBinaryInvocation(unittest.TestCase):
         self.assertEqual(classified['kind'], 'none')
 
 
+@unittest.skipIf(not (find_bin('yt-dlp') and find_bin('ffmpeg')),
+                 'yt-dlp or ffmpeg not installed')
+class TestPreparePackBinaryReplication(unittest.TestCase):
+    """
+    Mirrors the yt-prepare-pack pipeline: one download, multiple ffmpeg
+    cuts. Validates that the exact ffmpeg invocation used in main.ts
+    produces a valid mp3 for each segment.
+    """
+
+    URL = 'https://www.youtube.com/watch?v=aBr2kKAHN6M'
+
+    def is_valid_mp3(self, path):
+        if not os.path.exists(path) or os.path.getsize(path) < 200:
+            return False
+        with open(path, 'rb') as f:
+            header = f.read(4)
+        return header[:3] == b'ID3' or header[:2] in (
+            b'\xff\xfb', b'\xff\xf3', b'\xff\xf2', b'\xff\xe3')
+
+    def test_one_download_two_cuts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src_template = os.path.join(tmp, 'src.%(ext)s')
+            src_mp3      = os.path.join(tmp, 'src.mp3')
+
+            r = subprocess.run([
+                'yt-dlp', '-x', '--audio-format', 'mp3', '--audio-quality', '0',
+                '--no-playlist', '-o', src_template, self.URL,
+            ], capture_output=True, text=True, timeout=180)
+            self.assertEqual(r.returncode, 0, f"download failed: {r.stderr}")
+            self.assertTrue(os.path.exists(src_mp3))
+
+            segs = [(0.0, 1.0), (1.0, 2.0)]
+            for i, (start, end) in enumerate(segs):
+                out = os.path.join(tmp, f'seg{i}.mp3')
+                r = subprocess.run([
+                    'ffmpeg', '-y', '-ss', str(start), '-t', str(end - start),
+                    '-i', src_mp3, '-acodec', 'libmp3lame', '-q:a', '2', out,
+                ], capture_output=True, text=True, timeout=30)
+                self.assertEqual(r.returncode, 0, f"cut {i} failed: {r.stderr}")
+                self.assertTrue(self.is_valid_mp3(out),
+                                f"segment {i} is not a valid mp3")
+
+
 if __name__ == '__main__':
     unittest.main()

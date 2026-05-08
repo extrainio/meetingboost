@@ -734,6 +734,85 @@ ipcMain.handle('yt-prepare-clip', async (_e, opts: PrepareClipOpts) => {
   }
 });
 
+interface PreparePackSegment { title: string; start: number; end: number; }
+interface PreparePackOpts    { url: string; segments: PreparePackSegment[]; }
+
+/**
+ * Bulk-prepare N snippets from one YouTube source. Downloads the source
+ * mp3 once (or skips the download entirely if every requested segment is
+ * already cached), then ffmpeg-cuts each segment into the same .cache/yt/
+ * directory that yt-prepare-clip uses. Cache key matches: ytCacheKey(url,
+ * start, end). Repeated invocations with overlapping segments are free.
+ *
+ * Partial failure tolerated: a failed cut is reported in `failed[]`; the
+ * remaining cuts still complete. Caller decides whether to retry the
+ * failures or proceed without them.
+ *
+ * Defensive caps: rejects > 100 segments or any segment outside [0.1, 60]s.
+ */
+ipcMain.handle('yt-prepare-pack', async (_e, opts: PreparePackOpts) => {
+  const { url, segments } = opts;
+
+  if (segments.length > 100) {
+    return { ok: false, error: 'Too many segments (max 100).' };
+  }
+  for (const s of segments) {
+    const dur = s.end - s.start;
+    if (dur < 0.1 || dur > 60) {
+      return { ok: false, error: `Segment "${s.title}" has invalid duration (${dur.toFixed(2)}s).` };
+    }
+  }
+
+  const cacheDir = ytCacheDir();
+  const planned = segments.map(s => {
+    const key       = ytCacheKey(url, s.start, s.end);
+    const cachePath = path.join(cacheDir, `${key}.mp3`);
+    return { ...s, cachePath, cached: fs.existsSync(cachePath) };
+  });
+
+  const needsCut = planned.filter(p => !p.cached);
+  let tmpMp3: string | null = null;
+  const prepared: { title: string; cachePath: string; durationMs: number }[] = [];
+  const failed:   { title: string; error: string }[] = [];
+
+  try {
+    if (needsCut.length > 0) {
+      tmpMp3 = await downloadSourceMp3(url);
+    }
+
+    const ffmpeg = findBin('ffmpeg');
+    for (const p of planned) {
+      if (p.cached) {
+        prepared.push({
+          title: p.title, cachePath: p.cachePath,
+          durationMs: Math.round((p.end - p.start) * 1000),
+        });
+        continue;
+      }
+      try {
+        await spawnPromise(ffmpeg, [
+          '-y', '-ss', String(p.start), '-t', String(p.end - p.start),
+          '-i', tmpMp3!, '-acodec', 'libmp3lame', '-q:a', '2', p.cachePath,
+        ]);
+        prepared.push({
+          title: p.title, cachePath: p.cachePath,
+          durationMs: Math.round((p.end - p.start) * 1000),
+        });
+      } catch (e) {
+        try { fs.unlinkSync(p.cachePath); } catch {}
+        failed.push({ title: p.title, error: (e as Error).message });
+      }
+    }
+
+    if (tmpMp3) { try { fs.unlinkSync(tmpMp3); } catch {} }
+
+    return { ok: true, prepared, failed };
+  } catch (e) {
+    if (tmpMp3) { try { fs.unlinkSync(tmpMp3); } catch {} }
+    return { ok: false, error: (e as Error).message, prepared, failed };
+  }
+});
+
 /**
  * Promote a previously-prepared clip into the library inventory. Idempotent
  * for repeated clicks: copies the cache file into the library dir under a
