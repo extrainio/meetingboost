@@ -597,6 +597,40 @@ body::after {
   .btn-fetch:hover { transform: none; }
   .rec-mic-btn.is-recording { animation: none; }
 }
+
+/* ── YouTube Pack tab ────────────────────────────────────────────────── */
+.ytp-state            { display: flex; flex-direction: column; gap: 12px; }
+.ytp-meta             { display: flex; gap: 12px; align-items: flex-start; }
+.ytp-thumb            { width: 120px; height: 68px; object-fit: cover; border-radius: 4px; }
+.ytp-meta-text        { flex: 1; }
+.ytp-title            { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.ytp-summary          { font-size: 12px; opacity: 0.7; }
+
+.ytp-list             { max-height: 320px; overflow-y: auto; border: 1px solid var(--border, #333);
+                        border-radius: 4px; padding: 4px 0; }
+.ytp-row              { display: grid; grid-template-columns: 24px 32px 1fr auto;
+                        align-items: center; gap: 8px; padding: 6px 12px;
+                        border-bottom: 1px solid var(--border-soft, #222); }
+.ytp-row:last-child   { border-bottom: 0; }
+.ytp-row-title        { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ytp-row-time         { font-size: 11px; opacity: 0.65; font-variant-numeric: tabular-nums; }
+.ytp-row-dur          { opacity: 0.55; margin-left: 4px; }
+.ytp-tag              { display: inline-block; margin-left: 6px; padding: 1px 6px;
+                        font-size: 10px; border: 1px solid var(--border, #444);
+                        border-radius: 8px; opacity: 0.7; }
+.ytp-preview          { background: transparent; border: 1px solid var(--border, #444);
+                        border-radius: 4px; cursor: pointer; padding: 2px 6px; }
+
+.ytp-cap              { font-size: 12px; opacity: 0.75; }
+.ytp-actions          { display: flex; gap: 8px; justify-content: flex-end; }
+.ytp-error            { color: var(--error, #f66); font-size: 12px;
+                        background: rgba(255,80,80,0.08); padding: 8px 12px; border-radius: 4px; }
+.ytp-progress         { width: 100%; height: 12px; }
+.ytp-progress-stage   { font-size: 13px; font-weight: 500; }
+.ytp-progress-detail  { font-size: 12px; opacity: 0.7; min-height: 1.2em; }
+
+.hint                 { font-size: 12px; opacity: 0.65; }
+.field-row            { display: flex; gap: 8px; align-items: center; }
 </style>
 <script>(function(){var t=localStorage.getItem('mb-theme')||'dark';document.documentElement.setAttribute('data-theme',t==='system'?(window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):t);})()</script>
 </head>
