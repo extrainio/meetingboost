@@ -763,7 +763,27 @@ body::after {
       </div>
 
       <div class="ytp-state ytp-review" hidden>
-        <!-- filled in Task 9 -->
+        <div class="ytp-meta">
+          <img class="ytp-thumb" id="ytpThumb" alt="">
+          <div class="ytp-meta-text">
+            <div class="ytp-title" id="ytpTitle"></div>
+            <div class="ytp-summary" id="ytpSummary"></div>
+          </div>
+        </div>
+
+        <div class="ytp-list" id="ytpList"></div>
+
+        <div class="field-row">
+          <div class="field-lbl">Pack name</div>
+          <input class="inp" id="ytpPackName">
+        </div>
+        <div class="ytp-cap" id="ytpCap"></div>
+
+        <div class="ytp-actions">
+          <button class="btn" id="ytpCancelBtn">Cancel</button>
+          <button class="btn primary" id="ytpCreateBtn">Create Pack</button>
+        </div>
+        <div class="ytp-error" id="ytpReviewError" hidden></div>
       </div>
 
       <div class="ytp-state ytp-import" hidden>
@@ -1559,8 +1579,128 @@ body::after {
     }
   });
 
-  // Stub — implemented in Task 9
-  function renderYtpReview(_url, _result) {}
+  const ytpThumb       = document.getElementById('ytpThumb');
+  const ytpTitle       = document.getElementById('ytpTitle');
+  const ytpSummary     = document.getElementById('ytpSummary');
+  const ytpListEl      = document.getElementById('ytpList');
+  const ytpPackNameInp = document.getElementById('ytpPackName');
+  const ytpCap         = document.getElementById('ytpCap');
+  const ytpCancelBtn   = document.getElementById('ytpCancelBtn');
+  const ytpCreateBtn   = document.getElementById('ytpCreateBtn');
+  const ytpReviewErr   = document.getElementById('ytpReviewError');
+
+  const YTP_MIN = 0.3;
+  const YTP_MAX_AUTO = 30.0;
+  const YTP_MAX_KEYS = 15;
+  const YTP_KEYS = ['q','w','e','r','t','a','s','d','f','g','z','x','c','v','b'];
+
+  function ytpFmtTime(s) {
+    const m = Math.floor(s / 60), r = Math.floor(s % 60);
+    return `${m}:${String(r).padStart(2, '0')}`;
+  }
+
+  function ytpToSnippets(detect) {
+    // Normalize playlist + chapters into the same {title,start,end} shape.
+    // For playlist items we synthesize start=0, end=duration so the
+    // filter/cap logic works uniformly. yt-prepare-pack downloads each video
+    // separately, so playlist mode actually calls prepare-pack once per video.
+    // We pass perVideoUrl through so Task 10 can route accordingly.
+    if (detect.kind === 'chapters') {
+      return detect.chapters.map(c => ({
+        title: c.title, start: c.start, end: c.end,
+        perVideoUrl: null,
+      }));
+    }
+    // playlist
+    return detect.items.map(it => ({
+      title: it.title,
+      start: 0,
+      end:   it.duration ?? 0,
+      perVideoUrl: `https://www.youtube.com/watch?v=${it.videoId}`,
+    }));
+  }
+
+  let ytpRows = [];
+
+  function renderYtpReview(url, detect) {
+    ytpReviewErr.hidden = true;
+    ytpThumb.src = detect.meta.thumbnail || '';
+    ytpThumb.style.display = detect.meta.thumbnail ? '' : 'none';
+    ytpTitle.textContent = detect.meta.title || 'Untitled';
+
+    const snippets = ytpToSnippets(detect);
+    ytpRows = snippets
+      .map((s, idx) => ({ ...s, idx, dur: s.end - s.start }))
+      .filter(s => s.dur >= YTP_MIN || detect.kind === 'playlist')
+      .map(s => ({
+        ...s,
+        autoCheck: detect.kind === 'playlist' ? true : (s.dur <= YTP_MAX_AUTO),
+        reason:    (detect.kind !== 'playlist' && s.dur > YTP_MAX_AUTO) ? 'too_long' : null,
+      }));
+
+    ytpListEl.innerHTML = ytpRows.map((s, i) => `
+      <div class="ytp-row" data-idx="${i}">
+        <input type="checkbox" class="ytp-check" ${s.autoCheck ? 'checked' : ''}>
+        <button class="ytp-preview" type="button">▶</button>
+        <div class="ytp-row-title">${escapeHtml(s.title || 'Untitled')}</div>
+        <div class="ytp-row-time">
+          ${ytpFmtTime(s.start)}–${ytpFmtTime(s.end)}
+          <span class="ytp-row-dur">(${s.dur.toFixed(1)}s)</span>
+          ${s.reason === 'too_long' ? '<span class="ytp-tag">too long</span>' : ''}
+        </div>
+      </div>
+    `).join('');
+
+    ytpListEl.querySelectorAll('.ytp-check').forEach((cb, i) => {
+      cb.addEventListener('change', updateYtpCap);
+    });
+    ytpListEl.querySelectorAll('.ytp-preview').forEach((btn, i) => {
+      btn.addEventListener('click', () => previewYtpRow(url, ytpRows[i]));
+    });
+
+    ytpPackNameInp.value = detect.meta.title || 'YouTube Pack';
+    updateYtpCap();
+  }
+
+  function selectedYtpRows() {
+    return ytpRows.filter((_, i) =>
+      ytpListEl.querySelectorAll('.ytp-check')[i].checked
+    );
+  }
+
+  function updateYtpCap() {
+    const sel = selectedYtpRows();
+    const overflow = Math.max(0, sel.length - YTP_MAX_KEYS);
+    const keys = YTP_KEYS.slice(0, Math.min(sel.length, YTP_MAX_KEYS)).join(',');
+    ytpCap.textContent =
+      `Selected: ${sel.length} / ${ytpRows.length} snippets   →   keys ${keys}` +
+      (overflow ? `   (${overflow} extra ignored — cap is ${YTP_MAX_KEYS})` : '');
+  }
+
+  async function previewYtpRow(url, row) {
+    // Reuses the existing single-clip handler for instant preview.
+    // Note: existing handler takes an OPTIONS OBJECT (matches preload signature).
+    const previewUrl = row.perVideoUrl || url;
+    const r = await window.electronAPI.ytPrepareClip({
+      url: previewUrl, start: row.start, end: row.end,
+    });
+    if (r.ok) {
+      const a = new Audio(r.url);
+      a.play();
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  ytpCancelBtn.addEventListener('click', () => {
+    ytpRows = [];
+    ytpUrl.value = '';
+    setYtpState('paste');
+  });
 </script>
 </body>
 </html>
