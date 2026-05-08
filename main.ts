@@ -396,6 +396,76 @@ function slugify(name: string, fallback = 'sound'): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || fallback;
 }
 
+// ── YouTube Pack helpers ───────────────────────────────────────────────────
+//
+// Pure functions used by yt-detect-snippets / yt-prepare-pack / library-
+// create-pack-from-clips. Mirrored in tests/test_youtube_pack.py.
+
+const MIN_SNIPPET_SEC = 0.3;
+const MAX_SNIPPET_SEC_AUTOCHECK = 30.0;
+const MAX_KEYS = 15;
+const KEY_ORDER = ['q','w','e','r','t','a','s','d','f','g','z','x','c','v','b'];
+
+interface RawChapter { title: string; start: number; end: number; }
+interface FilteredSnippet {
+  title: string; start: number; end: number; dur: number;
+  autoCheck: boolean; reason: 'too_long' | null;
+}
+
+export function filterSnippets(chapters: RawChapter[]): FilteredSnippet[] {
+  const out: FilteredSnippet[] = [];
+  for (const ch of chapters) {
+    const dur = ch.end - ch.start;
+    if (dur < MIN_SNIPPET_SEC) continue;
+    const tooLong = dur > MAX_SNIPPET_SEC_AUTOCHECK;
+    out.push({
+      title: ch.title,
+      start: ch.start,
+      end: ch.end,
+      dur,
+      autoCheck: !tooLong,
+      reason: tooLong ? 'too_long' : null,
+    });
+  }
+  return out;
+}
+
+interface KeyAssignment<T> { snippet: T; key: string; }
+
+export function mapSnippetsToKeys<T>(
+  snippets: T[]
+): { mapped: KeyAssignment<T>[]; overflowCount: number } {
+  const mapped: KeyAssignment<T>[] = [];
+  for (let i = 0; i < Math.min(snippets.length, MAX_KEYS); i++) {
+    mapped.push({ snippet: snippets[i], key: KEY_ORDER[i] });
+  }
+  return {
+    mapped,
+    overflowCount: Math.max(0, snippets.length - MAX_KEYS),
+  };
+}
+
+export function slugifyPackName(
+  name: string,
+  existingNames: string[]
+): { finalName: string; packId: string } {
+  const base = (name || '').trim() || 'YouTube Pack';
+
+  let finalName = base;
+  let n = 2;
+  while (existingNames.includes(finalName)) {
+    finalName = `${base} (${n})`;
+    n += 1;
+  }
+
+  let slug = finalName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  if (!slug) {
+    slug = `yt-pack-${Date.now()}`;
+  }
+
+  return { finalName, packId: slug };
+}
+
 function bundledPacksFile(): string {
   return path.join(__dirname, 'src', 'packs.json');
 }
