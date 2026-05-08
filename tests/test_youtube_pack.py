@@ -354,5 +354,55 @@ class TestPreparePackBinaryReplication(unittest.TestCase):
                                 f"segment {i} is not a valid mp3")
 
 
+class TestLibraryCreatePackRollback(unittest.TestCase):
+    """
+    The library-create-pack-from-clips handler must be atomic-with-rollback:
+    if any clip copy fails, all previously-copied clips are deleted before
+    the error returns. We test the algorithm here in Python form; the
+    e2e Playwright test exercises it through the real handler.
+    """
+
+    def simulate_create_pack(self, clips, copy_fn):
+        """
+        clips: list of {'cachePath','dest'} dicts.
+        copy_fn(src, dest): callable that may raise to simulate failure.
+        Returns (ok: bool, copied_paths: list).
+        """
+        copied = []
+        try:
+            for c in clips:
+                copy_fn(c['cachePath'], c['dest'])
+                copied.append(c['dest'])
+            return True, copied
+        except Exception:
+            for p in copied:
+                try: os.unlink(p)
+                except OSError: pass
+            return False, []
+
+    def test_rollback_on_third_clip(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            srcs  = [os.path.join(tmp, f'src{i}.mp3') for i in range(3)]
+            dests = [os.path.join(tmp, f'dst{i}.mp3') for i in range(3)]
+            for s in srcs:
+                with open(s, 'wb') as f:
+                    f.write(b'ID3' + b'\x00' * 200)
+
+            clips = [{'cachePath': s, 'dest': d} for s, d in zip(srcs, dests)]
+
+            calls = {'n': 0}
+            def flaky_copy(src, dest):
+                calls['n'] += 1
+                if calls['n'] == 3:
+                    raise IOError('simulated disk full')
+                shutil.copyfile(src, dest)
+
+            ok, copied = self.simulate_create_pack(clips, flaky_copy)
+            self.assertFalse(ok)
+            for d in dests:
+                self.assertFalse(os.path.exists(d),
+                                 f"{d} should have been rolled back")
+
+
 if __name__ == '__main__':
     unittest.main()

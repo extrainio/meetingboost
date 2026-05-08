@@ -856,6 +856,99 @@ ipcMain.handle('library-add-from-clip', async (_e, opts: {
   return { ok: true, item: { ...meta, url: pathToFileURL(outFile).href } };
 });
 
+interface CreatePackClip {
+  cachePath:  string;
+  title:      string;
+  durationMs: number;
+}
+interface CreatePackOpts {
+  url:        string;
+  packName:   string;
+  clips:      CreatePackClip[];
+}
+
+/**
+ * Atomically (with rollback) create a new user pack from prepared clip
+ * cache files. Steps:
+ *   1. for each clip: copy cachePath → userSoundsDir()/custom/yt-<id>.mp3
+ *   2. write user packs.json with the new pack entry
+ *   3. emit packs-changed
+ * On any step-1 failure, deletes already-copied files and returns error.
+ * On step-2 failure, deletes ALL step-1 files. packs.json is written last
+ * so a crash between 1 and 2 leaks orphaned mp3s rather than leaving a
+ * pack referencing missing files.
+ *
+ * Defensive cap: rejects > 15 clips (keyboard layout cap).
+ */
+ipcMain.handle('library-create-pack-from-clips', async (_e, opts: CreatePackOpts) => {
+  const { url, packName, clips } = opts;
+  if (clips.length === 0) {
+    return { ok: false, error: 'No clips selected.' };
+  }
+  if (clips.length > MAX_KEYS) {
+    return { ok: false, error: `Too many clips (max ${MAX_KEYS}).` };
+  }
+
+  ensureUserDirs();
+  const customDir = customSoundsDir();
+
+  const userPacks  = readUserPacks();
+  const existing   = userPacks.map(p => p.name);
+  const { finalName, packId } = slugifyPackName(packName, existing);
+
+  // Step 1 — copy each clip into custom/yt-<id>.mp3
+  const copied: string[] = [];
+  const keyMap = mapSnippetsToKeys(clips);
+  const packKeys: Record<string, { label: string; file: string; source: 'user' }> = {};
+
+  try {
+    for (const km of keyMap.mapped) {
+      const clip   = km.snippet as CreatePackClip;
+      const id     = `yt_${Date.now()}_${km.key}`;
+      const file   = `yt-${id}.mp3`;
+      const dest   = path.join(customDir, file);
+      fs.copyFileSync(clip.cachePath, dest);
+      copied.push(dest);
+      packKeys[km.key] = {
+        label:  clip.title,
+        file:   `custom/${file}`,
+        source: 'user',
+      };
+    }
+  } catch (e) {
+    for (const p of copied) { try { fs.unlinkSync(p); } catch {} }
+    return { ok: false, error: (e as Error).message };
+  }
+
+  // Step 2 — append to user packs.json
+  try {
+    const newPack = {
+      id: packId,
+      name: finalName,
+      description: `Imported from YouTube`,
+      keys: packKeys,
+      origin: 'user' as const,
+      sourceUrl: url,
+    };
+    userPacks.push(newPack);
+    writeUserPacks(userPacks);
+  } catch (e) {
+    for (const p of copied) { try { fs.unlinkSync(p); } catch {} }
+    return { ok: false, error: (e as Error).message };
+  }
+
+  // Step 3 — notify
+  boardWin?.webContents.send('packs-changed');
+  childWin?.webContents.send('packs-changed');
+
+  return {
+    ok: true,
+    packId,
+    finalName,
+    keysAssigned: keyMap.mapped.length,
+  };
+});
+
 // ── Voice recording: WebM/Opus blob from renderer → MP3 in inventory ────────
 //
 // Recordings are saved into a flat inventory under userData/recordings without
