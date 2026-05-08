@@ -645,6 +645,22 @@ interface PrepareClipOpts {
 }
 
 /**
+ * Download a YouTube source as a temp mp3. Returns the temp file path.
+ * Caller is responsible for unlinking the temp file when done. Used by
+ * yt-prepare-clip (single-cut) and yt-prepare-pack (multi-cut).
+ */
+async function downloadSourceMp3(url: string): Promise<string> {
+  const tmpPath = path.join(app.getPath('temp'), `mb_yt_${Date.now()}.%(ext)s`);
+  const tmpMp3  = tmpPath.replace('%(ext)s', 'mp3');
+  const ytdlp   = findBin('yt-dlp');
+  await spawnPromise(ytdlp, [
+    '-x', '--audio-format', 'mp3', '--audio-quality', '0',
+    '--no-playlist', '-o', tmpPath, url,
+  ]);
+  return tmpMp3;
+}
+
+/**
  * Download + ffmpeg-cut a YouTube excerpt into the cache, returning a playable
  * file:// URL. Cached by (url, start, end) so a Preview click followed by
  * "+ Add to Library" doesn't re-download — the cached file just gets moved.
@@ -661,25 +677,20 @@ ipcMain.handle('yt-prepare-clip', async (_e, opts: PrepareClipOpts) => {
     return { ok: true, cachePath: outFile, url: pathToFileURL(outFile).href, cached: true };
   }
 
-  const tmpPath = path.join(app.getPath('temp'), `mb_yt_${Date.now()}.%(ext)s`);
-  const tmpMp3  = tmpPath.replace('%(ext)s', 'mp3');
+  let tmpMp3: string | null = null;
   try {
-    const ytdlp  = findBin('yt-dlp');
+    tmpMp3 = await downloadSourceMp3(url);
     const ffmpeg = findBin('ffmpeg');
 
-    await spawnPromise(ytdlp, [
-      '-x', '--audio-format', 'mp3', '--audio-quality', '0',
-      '--no-playlist', '-o', tmpPath, url,
-    ]);
     await spawnPromise(ffmpeg, [
       '-y', '-ss', String(start), '-t', String(duration),
       '-i', tmpMp3, '-acodec', 'libmp3lame', '-q:a', '2', outFile,
     ]);
-    try { fs.unlinkSync(tmpMp3); } catch {}
+    if (tmpMp3) { try { fs.unlinkSync(tmpMp3); } catch {} }
 
     return { ok: true, cachePath: outFile, url: pathToFileURL(outFile).href, cached: false };
   } catch (e) {
-    try { fs.unlinkSync(tmpMp3); } catch {}
+    if (tmpMp3) { try { fs.unlinkSync(tmpMp3); } catch {} }
     try { fs.unlinkSync(outFile); } catch {}
     return { ok: false, error: (e as Error).message };
   }
