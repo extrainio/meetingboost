@@ -756,12 +756,10 @@ ipcMain.handle('yt-prepare-pack', async (_e, opts: PreparePackOpts) => {
   if (segments.length > 100) {
     return { ok: false, error: 'Too many segments (max 100).' };
   }
-  for (const s of segments) {
-    const dur = s.end - s.start;
-    if (dur < 0.1 || dur > 60) {
-      return { ok: false, error: `Segment "${s.title}" has invalid duration (${dur.toFixed(2)}s).` };
-    }
-  }
+
+  // Per-segment duration is validated below in the cut loop and pushed to
+  // failed[] rather than rejecting the whole batch — playlist mode in the
+  // renderer cannot know exact video durations up-front.
 
   const cacheDir = ytCacheDir();
   const planned = segments.map(s => {
@@ -782,6 +780,11 @@ ipcMain.handle('yt-prepare-pack', async (_e, opts: PreparePackOpts) => {
 
     const ffmpeg = findBin('ffmpeg');
     for (const p of planned) {
+      const dur = p.end - p.start;
+      if (dur < 0.1 || dur > 60) {
+        failed.push({ title: p.title, error: `Invalid duration (${dur.toFixed(2)}s) — must be 0.1–60s.` });
+        continue;
+      }
       if (p.cached) {
         prepared.push({
           title: p.title, cachePath: p.cachePath,

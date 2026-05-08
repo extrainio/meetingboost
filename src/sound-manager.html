@@ -1589,10 +1589,25 @@ body::after {
     const url = ytpUrl.value.trim();
     if (!url) { showYtpPasteError('Paste a YouTube URL first.'); return; }
 
+    // Disambiguate URLs that have BOTH a video id (?v=) and a playlist
+    // (list=) param — confirm() picks one. OK = whole playlist; Cancel = just this video.
+    let resolvedUrl = url;
+    if (/[?&]v=/.test(url) && /[?&]list=/.test(url)) {
+      const wholePlaylist = confirm(
+        'This URL points to a video that\'s also part of a playlist.\n\n' +
+        'OK = import the whole playlist\n' +
+        'Cancel = just this video'
+      );
+      if (!wholePlaylist) {
+        // Strip the list= param so detect treats it as a single video
+        resolvedUrl = url.replace(/[?&]list=[^&]+/, '').replace(/\?&/, '?').replace(/\?$/, '');
+      }
+    }
+
     ytpDetectBtn.disabled = true;
     ytpDetectBtn.textContent = 'Detecting…';
     try {
-      const r = await window.electronAPI.ytDetectSnippets(url);
+      const r = await window.electronAPI.ytDetectSnippets(resolvedUrl);
       if (!r.ok) { showYtpPasteError(r.error); return; }
 
       if (r.result.kind === 'none') {
@@ -1601,8 +1616,8 @@ body::after {
         );
         return;
       }
-      window.__ytpLastDetect = { url, result: r.result };
-      renderYtpReview(url, r.result);
+      window.__ytpLastDetect = { url: resolvedUrl, result: r.result };
+      renderYtpReview(resolvedUrl, r.result);
       setYtpState('review');
     } finally {
       ytpDetectBtn.disabled = false;
@@ -1669,6 +1684,14 @@ body::after {
     ytpThumb.style.display = detect.meta.thumbnail ? '' : 'none';
     ytpTitle.textContent = detect.meta.title || 'Untitled';
 
+    // Filter + auto-check rules:
+    // - Chapters branch matches main.ts/filterSnippets exactly: drop <YTP_MIN,
+    //   auto-check >YTP_MAX_AUTO with reason 'too_long'.
+    // - Playlist branch is intentionally permissive: trust the playlist's video
+    //   list (don't filter on duration heuristics) and always auto-check.
+    //   Each playlist video downloads separately — the per-segment cut happens
+    //   inside main.ts/yt-prepare-pack, which now skips bad-duration segments
+    //   and reports them in failed[] rather than rejecting the whole batch.
     const snippets = ytpToSnippets(detect);
     ytpRows = snippets
       .map((s, idx) => ({ ...s, idx, dur: s.end - s.start }))
@@ -1792,9 +1815,13 @@ body::after {
           const s = sel[i];
           ytpDetail.textContent = `Downloading video ${i + 1} of ${sel.length}: ${s.title}`;
           ytpProgress.value = 5 + Math.floor((i / sel.length) * 65);
+          // Cap end at 60s for playlist videos — the IPC handler enforces a 60s
+          // max per segment. Most soundboard-fodder playlist videos are short.
+          // Longer videos get a per-video failure surfaced via failed[].
+          const segEnd = Math.min(s.end || 60, 60);
           const r = await window.electronAPI.ytPreparePack({
             url: s.perVideoUrl,
-            segments: [{ title: s.title, start: 0, end: s.end || 600 }],
+            segments: [{ title: s.title, start: 0, end: segEnd }],
           });
           if (!r.ok) {
             allFailed.push({ title: s.title, error: r.error });
