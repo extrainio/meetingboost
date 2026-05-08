@@ -1717,11 +1717,14 @@ body::after {
   const ytpRetryBtn  = document.getElementById('ytpRetryBtn');
 
   ytpCreateBtn.addEventListener('click', async () => {
+    if (ytpCreateBtn.disabled) return;
+    ytpCreateBtn.disabled = true;
     ytpReviewErr.hidden = true;
     const sel = selectedYtpRows().slice(0, YTP_MAX_KEYS);
     if (sel.length === 0) {
       ytpReviewErr.textContent = 'Select at least one snippet.';
       ytpReviewErr.hidden = false;
+      ytpCreateBtn.disabled = false;
       return;
     }
 
@@ -1794,6 +1797,7 @@ body::after {
       ytpImportErr.textContent = e.message || String(e);
       ytpImportErr.hidden = false;
       ytpRetryBtn.hidden = false;
+      ytpCreateBtn.disabled = false;
     }
   });
 
