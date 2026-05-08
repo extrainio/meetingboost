@@ -43,7 +43,7 @@ yt-prepare-pack(url, segments[])
 
 library-create-pack-from-clips(packName, clips[])
   → copy each clip → userSoundsDir()/custom/yt-<id>.mp3
-  → write user packs.json with new pack entry, keys mapped in order (q,w,e,r,t,a,s,d,f,g,z,x,c,v,b,…)
+  → write user packs.json with new pack entry, keys mapped in order (q,w,e,r,t,a,s,d,f,g,z,x,c,v,b — 15 max)
   → emits 'packs-changed' to all windows
   → returns { ok, packId, finalName }
 ```
@@ -82,7 +82,7 @@ Detected: N items · total duration · approx download size
 └───────────────────────────────────────────────────────────────┘
 
 Pack name:  [ <prefilled from video/playlist title>           ]
-Selected:   M / N snippets   →   keys q,w,e,r,t,a,s,d,f,…
+Selected:   M / N snippets   →   keys q,w,e,r,t,a,s,d,f,g,z,x,c,v,b (15 max)
 
                                        [ Cancel ] [ Create Pack ]
 ```
@@ -99,7 +99,7 @@ Cutting snippet 7 of 14…
 
 - Auto-uncheck snippets > 30s. Visible with `[too long]` caption; user can re-check.
 - Drop snippets < 0.3s silently.
-- Hard-cap at 21 selected (keyboard layout). UI warns inline above the cap.
+- Hard-cap at 15 selected (keyboard layout: `q,w,e,r,t,a,s,d,f,g,z,x,c,v,b`). UI warns inline above the cap.
 - Playlist render cap at 50 entries; above that, show overflow message.
 - Single video that also carries `list=` triggers a one-time disambiguation prompt: *"Just this video"* vs *"Whole playlist."*
 
@@ -197,7 +197,7 @@ Even though the UI enforces these visually, the main-process handlers re-check:
 
 - `yt-prepare-pack`: reject if `segments.length > 100`.
 - `yt-prepare-pack`: reject any segment with `end - start > 60` or `< 0.1`.
-- `library-create-pack-from-clips`: reject if `clips.length > 21`.
+- `library-create-pack-from-clips`: reject if `clips.length > 15`.
 
 ### Out of scope for v1
 
@@ -207,63 +207,53 @@ Even though the UI enforces these visually, the main-process handlers re-check:
 
 ## Testing
 
-### Layer 1 — Unit tests on pure functions
+The repo's existing pattern (`test_record_pipeline.py`, `test_youtube_download.py`) is **Python tests that exercise the real binaries** and validate disk side effects, not JS tests with mocked IPC. We follow that pattern for the new pipeline.
 
-Extract these into testable helpers, no Electron, no spawn:
+### Layer 1 — Python integration test (`tests/test_youtube_pack.py`)
 
-| Function | Coverage |
-|---|---|
-| `classifyDetectResult(json)` | playlist+video URL ambiguity, missing chapters, empty chapters, single-entry playlist |
-| `filterSnippets(chapters, {minSec, maxSec})` | drop <0.3s, default-uncheck >30s, preserve order, preserve original index |
-| `mapSnippetsToKeys(snippets)` | pack-key order; truncate at 21; report overflow count |
-| `slugifyPackName(name, existing[])` | collision suffixing; empty/whitespace fallback |
-| `ytCacheKey(url, start, end)` | extend existing coverage: equal start/end, very long URLs |
+Mirrors the structure of `test_youtube_download.py`. Skips itself if `yt-dlp` or `ffmpeg` is not on PATH. Uses a stable CC0 YouTube video with chapters (TBD — needs to be selected; candidates: a short public-domain compilation, or an internal short upload) so CI can hit the real chain.
 
-### Layer 2 — Integration tests with mocked binaries
+Cases:
 
-Stub `yt-dlp` and `ffmpeg` via shell scripts in `tests/fixtures/mock-bin/`:
+- **Detect — chapters present.** Call `yt-dlp --dump-single-json` on the test URL, classify the result, assert `kind == 'chapters'` with the expected chapter count and titles.
+- **Detect — playlist.** Same with a short playlist URL; assert `kind == 'playlist'` with N items.
+- **Detect — no chapters.** A video known to have no chapters; assert `kind == 'none'`.
+- **Filter rules.** Pure-Python reimplementation of `filterSnippets` matching the TypeScript version: drop <0.3s, default-uncheck >30s. Tested against synthetic fixture chapter arrays. (Same dual-implementation pattern `test_record_pipeline.py` uses for the ffmpeg invocation.)
+- **Key mapping.** Pure-Python reimplementation of `mapSnippetsToKeys`: keys `q,w,e,r,t,a,s,d,f,g,z,x,c,v,b`, truncate at 15.
+- **Pack-name slug + collision suffixing.** Synthetic input + reimplementation.
+- **End-to-end pipeline replication.** Run yt-dlp + ffmpeg invocations identical to `yt-prepare-pack` against the test URL with two synthetic chapter ranges. Validate two valid `.mp3` files appear in a temp cache. Reuse the `is_valid_mp3` helper from `test_record_pipeline.py`.
 
-- `yt-dlp` — reads `$MOCK_YTDLP_FIXTURE` env var, prints fixture contents.
-- `ffmpeg` — creates an empty `.mp3` at the output path; exits non-zero if `MOCK_FFMPEG_FAIL` set.
+The dual-implementation pattern (logic exists in both TypeScript and Python) is a known cost of this testing style — the project already accepts it for `test_record_pipeline.py`. We accept the same trade-off here: it catches binary-invocation regressions, accepts the risk of TS/Python logic drift, and avoids booting Electron in tests.
 
-Fixtures cover: chapters-only video, playlist, no-chapters video, private-video error.
+### Layer 2 — Playwright e2e (`tests/e2e/youtube-pack-import.spec.ts`)
 
-Tests exercise handler bodies as plain functions (export them from `main.ts` for test access — same pattern as existing testable helpers).
+One golden-path spec. Uses the same real CC0 test URL as Layer 1 (or a recorded fixture if CI flakes — see Open Questions).
 
-Coverage:
-
-- `yt-detect-snippets` per fixture kind.
-- `yt-prepare-pack` happy path: 3 segments → 3 cache files written.
-- `yt-prepare-pack` partial failure: segment 2's ffmpeg fails → result reports 2 ok, 1 failed, no abort.
-- `library-create-pack-from-clips` happy path: 3 files + `packs.json` entry.
-- `library-create-pack-from-clips` rollback on fs error.
-
-### Layer 3 — One Playwright e2e (golden path)
-
-Add `tests/e2e/youtube-pack-import.spec.ts`:
-
-1. Boot app with mock-bin fixtures on PATH via env.
+1. Boot app.
 2. Open Sound Manager → click "YouTube Pack" tab.
-3. Paste fixture URL → click Detect → assert 3 candidate rows render with correct titles.
-4. Uncheck row 2, type pack name, click Create Pack.
-5. Wait for completion toast.
-6. Close Sound Manager → open Pack Selection → assert new pack appears with 2 keybinds.
-7. Trigger one keybind on the board → assert audio source loads (file:// resolves; no playback verification).
+3. Paste fixture URL → click Detect → assert candidate rows render with chapter titles.
+4. Uncheck one row, type pack name, click Create Pack.
+5. Wait for completion toast; assert no error states.
+6. Close Sound Manager → open Pack Selection → assert new pack appears with the expected keybind count.
+7. Trigger one keybind on the board → assert audio source resolves to a `file://` URL (no playback verification).
 
 ### Out of scope for testing
 
-- Real YouTube fetches in CI (flaky, brittle, slow — mock-bin covers the contract).
 - Visual regression on the candidate-review UI.
-- Stress tests for long videos / large playlists (caps enforced and unit-tested).
+- Stress tests for long videos / large playlists (caps enforced at IPC layer and exercised in Layer 1).
+- IPC-channel-level mock testing (project doesn't do this elsewhere; Playwright e2e is the IPC contract test).
+
+### Open question to resolve before implementation
+
+- **Test URL stability.** Does the project want to use a real public CC0 URL (matching `test_youtube_download.py`'s `aBr2kKAHN6M`), or record a JSON fixture once and replay it? The former is more authentic; the latter is more CI-resilient. Decide during plan-writing.
 
 ## File-level change list (preview)
 
 - `main.ts` — three new `ipcMain.handle` blocks; one helper `downloadSourceMp3`; export pure helpers for tests.
 - `preload.ts` — expose three new IPC channels.
 - `src/sound-manager.html` — third tab + three states (paste / review / import) + sanity-rule logic.
-- `tests/test_youtube_pack.js` (or similar; match existing style) — Layer 1 + 2.
-- `tests/fixtures/mock-bin/{yt-dlp,ffmpeg}` — mock binaries.
-- `tests/fixtures/yt-detect/{chapters,playlist,none,private-error}.json` — JSON fixtures.
-- `tests/e2e/youtube-pack-import.spec.ts` — Layer 3 e2e.
+- `tests/test_youtube_pack.py` — Layer 1 (matches existing Python test pattern: `test_youtube_download.py`, `test_record_pipeline.py`).
+- `tests/e2e/youtube-pack-import.spec.ts` — Layer 2 e2e.
+- Optional: `tests/fixtures/yt-detect/{chapters,playlist,none}.json` — only if we go the recorded-fixture route over real-URL (see test open question).
 
 No changes to: `packs.json` schema, `recordings.json` schema, single-clip YouTube flow, board, settings, packs.html.
