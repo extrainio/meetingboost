@@ -637,6 +637,10 @@ body::after {
       <div class="stab-icon">●</div>
       <div class="stab-label">Record Voice</div>
     </div>
+    <div class="stab" data-src="ytpack" onclick="setTab(this)">
+      <div class="stab-icon">📦</div>
+      <div class="stab-label">YouTube Pack</div>
+    </div>
 
     <div class="sdiv"></div>
     <div class="sidebar-lbl">My Library</div>
@@ -738,6 +742,33 @@ body::after {
         <div id="recError" class="rec-error" hidden></div>
       </div>
 
+    </section>
+
+    <!-- ── YOUTUBE PACK PANE ─────────────────────────────────── -->
+    <section class="src-pane" data-src="ytpack" hidden>
+      <div class="section-title">Create a pack from a YouTube URL</div>
+
+      <div class="ytp-state ytp-paste">
+        <div class="field-lbl">YouTube URL</div>
+        <div class="field-row">
+          <input class="inp" id="ytpUrl"
+                 placeholder="https://www.youtube.com/watch?v=…  or playlist URL">
+          <button class="btn primary" id="ytpDetectBtn">Detect</button>
+        </div>
+        <div class="hint">
+          Paste a playlist URL or a video with chapters.
+          Single videos without chapters: use the <a href="#" id="ytpSwitchToClip">YouTube Clip</a> tab.
+        </div>
+        <div class="ytp-error" id="ytpPasteError" hidden></div>
+      </div>
+
+      <div class="ytp-state ytp-review" hidden>
+        <!-- filled in Task 9 -->
+      </div>
+
+      <div class="ytp-state ytp-import" hidden>
+        <!-- filled in Task 10 -->
+      </div>
     </section>
 
     <div class="rule"></div>
@@ -1471,6 +1502,65 @@ body::after {
 
   // Initial tab state — make sure footer label and key picker reflect default.
   setTab(document.querySelector('.stab.active'));
+
+  // ── YouTube Pack tab ───────────────────────────────────────────────────
+  const ytpUrl       = document.getElementById('ytpUrl');
+  const ytpDetectBtn = document.getElementById('ytpDetectBtn');
+  const ytpPasteErr  = document.getElementById('ytpPasteError');
+  const ytpPaneRoot  = document.querySelector('.src-pane[data-src="ytpack"]');
+
+  function showYtpPasteError(msg) {
+    ytpPasteErr.textContent = msg;
+    ytpPasteErr.hidden = false;
+  }
+  function clearYtpPasteError() {
+    ytpPasteErr.hidden = true;
+  }
+
+  function setYtpState(name) {
+    ytpPaneRoot.querySelectorAll('.ytp-state').forEach(el => {
+      el.hidden = !el.classList.contains(`ytp-${name}`);
+    });
+  }
+
+  ytpDetectBtn.addEventListener('click', async () => {
+    clearYtpPasteError();
+    const url = ytpUrl.value.trim();
+    if (!url) { showYtpPasteError('Paste a YouTube URL first.'); return; }
+
+    ytpDetectBtn.disabled = true;
+    ytpDetectBtn.textContent = 'Detecting…';
+    try {
+      const r = await window.electronAPI.ytDetectSnippets(url);
+      if (!r.ok) { showYtpPasteError(r.error); return; }
+
+      if (r.result.kind === 'none') {
+        showYtpPasteError(
+          'This video has no chapters. Use the YouTube Clip tab to cut a single excerpt.'
+        );
+        return;
+      }
+      window.__ytpLastDetect = { url, result: r.result };
+      renderYtpReview(url, r.result);
+      setYtpState('review');
+    } finally {
+      ytpDetectBtn.disabled = false;
+      ytpDetectBtn.textContent = 'Detect';
+    }
+  });
+
+  document.getElementById('ytpSwitchToClip').addEventListener('click', e => {
+    e.preventDefault();
+    const ytTab = document.querySelector('.stab[data-src="youtube"]');
+    if (ytTab) {
+      setTab(ytTab);
+      const ytClipUrl = document.getElementById('ytUrl');
+      if (ytClipUrl) ytClipUrl.value = ytpUrl.value.trim();
+    }
+  });
+
+  // Stub — implemented in Task 9
+  function renderYtpReview(_url, _result) {}
 </script>
 </body>
 </html>
