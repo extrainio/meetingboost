@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>MeetingBoost · Press Q for rimshot. Win the call.</title>
-<meta name="description" content="A keyboard-driven soundboard for macOS meetings. 26 keys. 3 sound packs. Routes through BlackHole into Zoom, Teams, or Meet. Keypress, not six clicks." />
+<title>MeetingBoost · Keyboard-driven meeting audio for macOS</title>
+<meta name="description" content="Press a key, fire a sound into your Zoom/Teams/Meet call. Built for developer advocates, community managers, and meeting hosts who run a lot of calls. Mac-native, MIT-licensed, free." />
 <meta name="theme-color" content="#0d0a08" />
-<meta property="og:title" content="MeetingBoost · A keyboard-driven soundboard for macOS meetings" />
-<meta property="og:description" content="One keypress. One sound. Straight into the meeting. No menus, no dragging, no clicking." />
+<meta property="og:title" content="MeetingBoost · Keyboard-driven meeting audio for macOS" />
+<meta property="og:description" content="One keypress, one sound, straight into the meeting. Built for operators — not streamers." />
 <meta property="og:type" content="website" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -438,6 +438,22 @@ p { color: var(--text-2); max-width: 65ch; }
 .bench-row p { font-size: .96rem; color: var(--text-2); margin: 0; max-width: none; }
 
 /* ──────────────────────────────────────────────────────────────────────────
+   Audience strip — single low-weight row naming the target roles.
+   Lives below the bench, inside the hero header.
+   ────────────────────────────────────────────────────────────────────────── */
+.audience-strip {
+  display: flex; gap: 16px; align-items: center; padding: 18px 0 24px 0;
+  border-top: 1px solid var(--hairline);
+  font-family: var(--mono); font-size: var(--t-eyebrow);
+  color: var(--text-2); letter-spacing: 0.04em;
+}
+.audience-eyebrow { color: var(--muted); text-transform: uppercase; }
+.audience-roles { color: var(--text-2); }
+@media (max-width: 720px) {
+  .audience-strip { flex-direction: column; align-items: flex-start; gap: 4px; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
    How-it-routes — diagram-style flow. Two columns of short prose flank a
    center column of file-paths and command names. Reads as system documentation.
    ────────────────────────────────────────────────────────────────────────── */
@@ -654,11 +670,12 @@ p { color: var(--text-2); max-width: 65ch; }
    ────────────────────────────────────────────────────────────────────────── */
 .routes-3 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: clamp(14px, 2vw, 24px);
   margin-top: 36px;
 }
-@media (max-width: 880px) { .routes-3 { grid-template-columns: 1fr; } }
+@media (max-width: 1100px) { .routes-3 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .routes-3 { grid-template-columns: 1fr; } }
 
 .route3 {
   background: var(--s1);
@@ -1051,14 +1068,14 @@ footer .sig { color: var(--text-2); }
 <header class="hero">
   <div class="hero-grid">
     <div>
-      <p class="hero-eyebrow">Soundboard for macOS meetings</p>
+      <p class="hero-eyebrow">Meeting audio for operators · macOS</p>
       <h1>
         <span class="lead">Press Q</span>
         <span class="body">for <span class="accent">rimshot.</span></span>
         <span class="body">Win the call.</span>
       </h1>
       <p class="deck">
-        A 520×580 window that turns your keyboard into a soundboard. Each letter is a sound, each sound routes through BlackHole into Zoom, Teams, or Meet. One keypress. No menus. No alt-tab.
+        A 520×580 window that turns your keyboard into a meeting audio console. Built for developer advocates, community managers, and meeting hosts. Each letter fires a sound through BlackHole into Zoom, Teams, or Meet. One keypress. No menus. No alt-tab.
       </p>
       <div class="hero-cta">
         <a class="btn primary" href="https://github.com/extrain-pascal/meetingboost/releases/latest">
@@ -1122,15 +1139,20 @@ footer .sig { color: var(--text-2); }
       <p>The tile lights before the sound plays. You never wonder if the press registered.</p>
     </div>
     <div class="bench-row">
-      <div class="id">02 / Routing</div>
-      <h4>Pick any output device.</h4>
-      <p>Real device enumeration via setSinkId. Route to BlackHole, AirPods, or an external interface.</p>
+      <div class="id">02 / Not</div>
+      <h4>Not a voice changer. Not for streamers.</h4>
+      <p>This is meeting infrastructure for people who run calls — built around keyboard shortcuts and BlackHole, not Discord overlays or stream decks.</p>
     </div>
     <div class="bench-row">
       <div class="id">03 / Pricing</div>
       <h4>Free. No telemetry. No account.</h4>
       <p>All settings live in a JSON file at ~/Library/Application Support/MeetingBoost. That's it.</p>
     </div>
+  </div>
+
+  <div class="audience-strip section-inner" aria-label="Built for">
+    <span class="audience-eyebrow">Built for</span>
+    <span class="audience-roles">developer advocates · community managers · remote facilitators · meeting hosts</span>
   </div>
 </header>
 
@@ -1275,8 +1297,8 @@ footer .sig { color: var(--text-2); }
 <section id="add" aria-labelledby="add-h">
   <div class="section-inner">
     <div class="section-eyebrow"><span class="num">§ 04</span><span>Bring your own sounds</span><span class="rule"></span></div>
-    <h2 id="add-h">Three ways onto the board.</h2>
-    <p>Voice memo, YouTube excerpt, shared archive. Every route ends the same way: a key, a label, a sound on the board.</p>
+    <h2 id="add-h">Four ways onto the board.</h2>
+    <p>Voice memo, YouTube clip, YouTube pack, shared archive. Every route ends the same way: a key, a label, a sound on the board.</p>
 
     <div class="routes-3">
       <div class="route3">
@@ -1301,6 +1323,17 @@ footer .sig { color: var(--text-2); }
       </div>
       <div class="route3">
         <span class="num">Route 03</span>
+        <h4>Auto-pack a YouTube video</h4>
+        <p>Paste a chaptered video or playlist URL. The app detects each chapter or video, you uncheck what you don't want, and a new pack lands on the board with keys assigned. One paste, one pack.</p>
+        <div class="glyph glyph-mb" aria-hidden="true">
+          <span class="am">✓</span> <span class="dim">Intro · 0:00–0:42</span><br />
+          <span class="am">✓</span> <span class="dim">Demo · 0:43–2:15</span><br />
+          <span class="am">✓</span> <span class="dim">Q&amp;A clip · 2:16–3:04</span><br />
+          <span class="dim">☐ Outro · 3:05–3:30</span>
+        </div>
+      </div>
+      <div class="route3">
+        <span class="num">Route 04</span>
         <h4>Import an .mbpack</h4>
         <p>A zip with a fixed layout. Drop one in, MeetingBoost merges it. On id collision it auto-suffixes, never clobbers.</p>
         <div class="glyph glyph-mb">
@@ -1397,6 +1430,10 @@ footer .sig { color: var(--text-2); }
       <div class="qa">
         <h4>Will my coworkers know I'm using a soundboard?</h4>
         <p>Only if you tell them. From the meeting's perspective, the audio comes through your microphone the same way your voice does. There's no banner, no badge, no "powered by".</p>
+      </div>
+      <div class="qa">
+        <h4>Is this a voice changer?</h4>
+        <p>No. MeetingBoost plays sound files; it does not modify your voice. If you want voice effects for streaming or gaming, use Voicemod or Clownfish — different category, different tool.</p>
       </div>
       <div class="qa">
         <h4>Does this work without BlackHole?</h4>
