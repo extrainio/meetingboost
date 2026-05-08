@@ -399,7 +399,9 @@ function slugify(name: string, fallback = 'sound'): string {
 // ── YouTube Pack helpers ───────────────────────────────────────────────────
 //
 // Pure functions used by yt-detect-snippets / yt-prepare-pack / library-
-// create-pack-from-clips. Mirrored in tests/test_youtube_pack.py.
+// create-pack-from-clips. Mirrored in tests/test_youtube_pack.py — note the
+// Python mirror uses snake_case keys (overflow_count) per Python convention;
+// these helpers' return shapes are not part of any IPC contract.
 
 const MIN_SNIPPET_SEC = 0.3;
 const MAX_SNIPPET_SEC_AUTOCHECK = 30.0;

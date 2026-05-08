@@ -11,9 +11,11 @@ Run with: python3 -m pytest tests/test_youtube_pack.py -v
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
+import time
 import unittest
 
 
@@ -74,6 +76,22 @@ class TestFilterSnippets(unittest.TestCase):
         ])
         self.assertEqual([r['title'] for r in result], ['a', 'b', 'c'])
 
+    def test_keeps_exact_min_boundary(self):
+        # dur == 0.3 is kept (guard is < 0.3, strictly less than)
+        result = filter_snippets([
+            {'title': 'edge', 'start': 0, 'end': 0.3},
+        ])
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]['title'], 'edge')
+
+    def test_exact_max_boundary_is_autocheck(self):
+        # dur == 30.0 is autoCheck=True (guard is > 30, strictly greater than)
+        result = filter_snippets([
+            {'title': 'edge', 'start': 0, 'end': 30.0},
+        ])
+        self.assertTrue(result[0]['autoCheck'])
+        self.assertIsNone(result[0]['reason'])
+
 
 def map_snippets_to_keys(snippets):
     """
@@ -104,6 +122,11 @@ class TestMapSnippetsToKeys(unittest.TestCase):
         # Last assigned key is 'b'
         self.assertEqual(result['mapped'][-1]['key'], 'b')
 
+    def test_empty_input(self):
+        result = map_snippets_to_keys([])
+        self.assertEqual(result['mapped'], [])
+        self.assertEqual(result['overflow_count'], 0)
+
 
 def slugify_pack_name(name, existing_names):
     """
@@ -112,7 +135,6 @@ def slugify_pack_name(name, existing_names):
     - On collision with existing_names: append ' (2)', ' (3)', ...
     - packId is the slug of finalName + a unix-ms suffix if slug is empty.
     """
-    import re, time
     base = (name or '').strip() or 'YouTube Pack'
 
     final_name = base
@@ -140,6 +162,18 @@ class TestSlugifyPackName(unittest.TestCase):
     def test_double_collision(self):
         r = slugify_pack_name('Foo', ['Foo', 'Foo (2)'])
         self.assertEqual(r['finalName'], 'Foo (3)')
+
+    def test_slug_generation_basic(self):
+        r = slugify_pack_name('Tom & Jerry', [])
+        self.assertEqual(r['packId'], 'tom-jerry')
+
+    def test_empty_slug_falls_back_to_yt_pack_prefix(self):
+        # Title with no ASCII alphanumerics produces empty slug; fallback uses
+        # a 'yt-pack-<timestamp>' shape. We assert the prefix only, since the
+        # timestamp is non-deterministic by design.
+        r = slugify_pack_name('한국어', [])
+        self.assertTrue(r['packId'].startswith('yt-pack-'),
+                        f"expected yt-pack-* prefix, got {r['packId']}")
 
 
 if __name__ == '__main__':
