@@ -1,0 +1,15 @@
+{
+  "_type": "video",
+  "id": "vidChapters01",
+  "title": "Sound Effects Compilation",
+  "thumbnail": "https://i.ytimg.com/vi/vidChapters01/hqdefault.jpg",
+  "duration": 142,
+  "uploader": "TestChannel",
+  "chapters": [
+    { "title": "Intro Sting",   "start_time": 0,    "end_time": 6 },
+    { "title": "Cat Meow",      "start_time": 6,    "end_time": 11 },
+    { "title": "Anvil Drop",    "start_time": 11,   "end_time": 18 },
+    { "title": "Boing",         "start_time": 18,   "end_time": 22 },
+    { "title": "Outro",         "start_time": 22,   "end_time": 30 }
+  ]
+}

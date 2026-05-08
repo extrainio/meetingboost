@@ -468,6 +468,45 @@ export function slugifyPackName(
   return { finalName, packId: slug };
 }
 
+interface DetectMeta { title: string; thumbnail: string; duration?: number; }
+
+interface PlaylistItem { videoId: string; title: string; duration?: number; }
+interface ChapterItem  { title: string; start: number; end: number; }
+
+type DetectResult =
+  | { kind: 'playlist';  items:    PlaylistItem[]; meta: DetectMeta }
+  | { kind: 'chapters';  chapters: ChapterItem[];  meta: DetectMeta }
+  | { kind: 'none';      meta: DetectMeta };
+
+export function classifyDetectResult(raw: Record<string, unknown>): DetectResult {
+  const meta: DetectMeta = {
+    title:     (raw.title as string)     ?? '',
+    thumbnail: (raw.thumbnail as string) ?? '',
+    duration:  raw.duration as number | undefined,
+  };
+
+  if (raw._type === 'playlist' && Array.isArray(raw.entries)) {
+    const items: PlaylistItem[] = (raw.entries as Record<string, unknown>[]).map(e => ({
+      videoId:  (e.id as string)    ?? '',
+      title:    (e.title as string) ?? '',
+      duration: e.duration as number | undefined,
+    }));
+    return { kind: 'playlist', items, meta };
+  }
+
+  const chapters = raw.chapters;
+  if (Array.isArray(chapters) && chapters.length > 0) {
+    const out: ChapterItem[] = (chapters as Record<string, unknown>[]).map(c => ({
+      title: (c.title as string) ?? 'Untitled',
+      start: Number(c.start_time ?? 0),
+      end:   Number(c.end_time ?? 0),
+    }));
+    return { kind: 'chapters', chapters: out, meta };
+  }
+
+  return { kind: 'none', meta };
+}
+
 function bundledPacksFile(): string {
   return path.join(__dirname, 'src', 'packs.json');
 }

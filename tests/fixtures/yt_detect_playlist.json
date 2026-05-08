@@ -1,0 +1,11 @@
+{
+  "_type": "playlist",
+  "id": "PLtestPlaylist01",
+  "title": "Short SFX Playlist",
+  "thumbnail": "https://i.ytimg.com/vi/PLtestPlaylist01/hqdefault.jpg",
+  "entries": [
+    { "id": "vidA", "title": "Airhorn",     "duration": 4 },
+    { "id": "vidB", "title": "Sad Trombone","duration": 5 },
+    { "id": "vidC", "title": "Rimshot",     "duration": 3 }
+  ]
+}

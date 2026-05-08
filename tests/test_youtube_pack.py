@@ -176,5 +176,84 @@ class TestSlugifyPackName(unittest.TestCase):
                         f"expected yt-pack-* prefix, got {r['packId']}")
 
 
+FIXTURES_DIR = os.path.join(os.path.dirname(__file__), 'fixtures')
+
+
+def classify_detect_result(raw):
+    """
+    Mirrors classifyDetectResult in main.ts.
+    Returns one of:
+      {'kind': 'playlist',  'items':    [{'videoId','title','duration'}, ...], 'meta': {...}}
+      {'kind': 'chapters',  'chapters': [{'title','start','end'},        ...], 'meta': {...}}
+      {'kind': 'none',      'meta': {...}}
+    """
+    meta = {
+        'title':     raw.get('title', ''),
+        'thumbnail': raw.get('thumbnail', ''),
+        'duration':  raw.get('duration'),
+    }
+
+    if raw.get('_type') == 'playlist' and isinstance(raw.get('entries'), list):
+        items = []
+        for e in raw['entries']:
+            items.append({
+                'videoId':  e.get('id', ''),
+                'title':    e.get('title', ''),
+                'duration': e.get('duration'),
+            })
+        return {'kind': 'playlist', 'items': items, 'meta': meta}
+
+    chapters = raw.get('chapters')
+    if isinstance(chapters, list) and len(chapters) > 0:
+        out = []
+        for c in chapters:
+            out.append({
+                'title': c.get('title', 'Untitled'),
+                'start': float(c.get('start_time', 0)),
+                'end':   float(c.get('end_time', 0)),
+            })
+        return {'kind': 'chapters', 'chapters': out, 'meta': meta}
+
+    return {'kind': 'none', 'meta': meta}
+
+
+class TestClassifyDetectResult(unittest.TestCase):
+    def test_chapters_fixture(self):
+        with open(os.path.join(FIXTURES_DIR, 'yt_detect_chapters.json')) as f:
+            raw = json.load(f)
+        result = classify_detect_result(raw)
+        self.assertEqual(result['kind'], 'chapters')
+        self.assertEqual(len(result['chapters']), 5)
+        self.assertEqual(result['chapters'][0]['title'], 'Intro Sting')
+        self.assertEqual(result['chapters'][0]['start'], 0.0)
+        self.assertEqual(result['chapters'][0]['end'], 6.0)
+        self.assertEqual(result['meta']['title'], 'Sound Effects Compilation')
+
+    def test_playlist_fixture(self):
+        with open(os.path.join(FIXTURES_DIR, 'yt_detect_playlist.json')) as f:
+            raw = json.load(f)
+        result = classify_detect_result(raw)
+        self.assertEqual(result['kind'], 'playlist')
+        self.assertEqual(len(result['items']), 3)
+        self.assertEqual(result['items'][0]['videoId'], 'vidA')
+        self.assertEqual(result['items'][0]['title'], 'Airhorn')
+        self.assertEqual(result['items'][0]['duration'], 4)
+
+    def test_none_fixture(self):
+        with open(os.path.join(FIXTURES_DIR, 'yt_detect_none.json')) as f:
+            raw = json.load(f)
+        result = classify_detect_result(raw)
+        self.assertEqual(result['kind'], 'none')
+        self.assertEqual(result['meta']['title'], 'Single Plain Video')
+
+    def test_empty_chapters_treated_as_none(self):
+        # Defensive: yt-dlp can return chapters: [] for some videos.
+        # Should classify as 'none', not as 'chapters' with zero entries.
+        result = classify_detect_result({
+            '_type': 'video', 'title': 'X', 'chapters': [],
+        })
+        self.assertEqual(result['kind'], 'none')
+
+
 if __name__ == '__main__':
     unittest.main()
