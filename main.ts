@@ -638,6 +638,44 @@ ipcMain.handle('yt-info', async (_e, url: string) => {
   }
 });
 
+/**
+ * Detect what kind of source the URL points to: a playlist (multiple videos),
+ * a single video with chapters, or a single video without chapters.
+ *
+ * One yt-dlp call per URL. Caller (renderer) decides what to do with each
+ * shape — for 'none' we route the user to the existing single-clip flow.
+ */
+ipcMain.handle('yt-detect-snippets', async (_e, url: string) => {
+  try {
+    const ytdlp = findBin('yt-dlp');
+
+    // For URLs with list= we want playlist info; for plain video URLs we
+    // want chapters. yt-dlp behavior:
+    //   --no-playlist → ignores list=, returns single-video json
+    //   --flat-playlist → playlist wrapper with thin entries[]
+    const isPlaylist = /[?&]list=/.test(url);
+    const args = isPlaylist
+      ? ['--dump-single-json', '--flat-playlist', url]
+      : ['--dump-single-json', '--no-playlist',   url];
+
+    const raw = await spawnPromise(ytdlp, args, { capture: true });
+    const json = JSON.parse(raw) as Record<string, unknown>;
+    const result = classifyDetectResult(json);
+
+    return { ok: true, result };
+  } catch (e) {
+    const msg = (e as Error).message;
+    let friendly = msg;
+    if (/Private video/i.test(msg))             friendly = 'This video is private.';
+    else if (/age-?restrict|Sign in to confirm your age/i.test(msg))
+                                                friendly = 'Age-restricted video — yt-dlp cannot fetch it.';
+    else if (/HTTP Error 429/.test(msg))        friendly = 'YouTube rate-limited — try again in a minute.';
+    else if (/Video unavailable/i.test(msg))    friendly = 'Video unavailable.';
+
+    return { ok: false, error: friendly };
+  }
+});
+
 interface PrepareClipOpts {
   url:    string;
   start:  number;   // seconds

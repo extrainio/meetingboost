@@ -283,5 +283,33 @@ class TestClassifyDetectResult(unittest.TestCase):
         self.assertEqual(result['chapters'][1]['title'], 'Real')
 
 
+def find_bin(name):
+    return shutil.which(name)
+
+
+@unittest.skipIf(not find_bin('yt-dlp'), 'yt-dlp not installed')
+class TestDetectSnippetsBinaryInvocation(unittest.TestCase):
+    """
+    Validates that the same yt-dlp invocation pattern used by
+    yt-detect-snippets in main.ts works against the same fixture URL
+    as test_youtube_download.py. We don't import TS code; we exercise
+    the binary contract.
+    """
+
+    URL = 'https://www.youtube.com/watch?v=aBr2kKAHN6M'
+
+    def test_dump_single_json_returns_parseable(self):
+        result = subprocess.run(
+            ['yt-dlp', '--dump-single-json', '--no-playlist', self.URL],
+            capture_output=True, text=True, timeout=120,
+        )
+        self.assertEqual(result.returncode, 0,
+                         f"yt-dlp failed: {result.stderr}")
+        data = json.loads(result.stdout)
+        classified = classify_detect_result(data)
+        # This particular URL has no chapters
+        self.assertEqual(classified['kind'], 'none')
+
+
 if __name__ == '__main__':
     unittest.main()
