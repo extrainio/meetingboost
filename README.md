@@ -106,6 +106,11 @@ under 200 lines of TypeScript on the main side.
   cap, and one-tap re-record. Saves directly to your Custom pack.
 - **YouTube clip → key.** Paste a URL, scrub to a 1–10 s excerpt, assign
   it to a key. `yt-dlp` downloads, `ffmpeg` crops, you press the key.
+- **YouTube Pack import.** Paste a YouTube URL into Sound Manager → "YouTube Pack" tab.
+  The app detects chapter timestamps (single videos) or playlist entries, lets you review
+  and uncheck candidates, and creates a ready-to-use pack mapped to the keyboard layout
+  (`q,w,e,r,t / a,s,d,f,g / z,x,c,v,b`). Snippets >30 s are auto-unchecked; the cap is
+  15 keys per pack. Requires `yt-dlp` on PATH (same as the YouTube Clip feature).
 - **`.mbpack` export & import.** Share packs as single files. Auto-renames
   on collision so importing doesn't clobber your stuff.
 - **Global keyboard capture.** With Accessibility permission granted,
