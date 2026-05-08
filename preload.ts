@@ -46,6 +46,34 @@ contextBridge.exposeInMainWorld('electronAPI', {
     Promise<{ ok: boolean; item?: { id: string; name: string; url: string }; error?: string }> =>
     ipcRenderer.invoke('library-add-from-clip', opts),
 
+  ytDetectSnippets: (url: string):
+    Promise<{
+      ok: boolean;
+      result?:
+        | { kind: 'playlist';  items:    Array<{ videoId: string; title: string; duration?: number }>; meta: { title: string; thumbnail: string; duration?: number } }
+        | { kind: 'chapters';  chapters: Array<{ title: string; start: number; end: number }>;          meta: { title: string; thumbnail: string; duration?: number } }
+        | { kind: 'none';      meta: { title: string; thumbnail: string; duration?: number } };
+      error?: string;
+    }> =>
+    ipcRenderer.invoke('yt-detect-snippets', url),
+
+  ytPreparePack: (opts: { url: string; segments: Array<{ title: string; start: number; end: number }> }):
+    Promise<{
+      ok: boolean;
+      prepared?: Array<{ title: string; cachePath: string; durationMs: number }>;
+      failed?:   Array<{ title: string; error: string }>;
+      error?: string;
+    }> =>
+    ipcRenderer.invoke('yt-prepare-pack', opts),
+
+  libraryCreatePackFromClips: (opts: {
+    url: string;
+    packName: string;
+    clips: Array<{ cachePath: string; title: string; durationMs: number }>;
+  }):
+    Promise<{ ok: boolean; packId?: string; finalName?: string; keysAssigned?: number; error?: string }> =>
+    ipcRenderer.invoke('library-create-pack-from-clips', opts),
+
   // ── Library inventory (mic recordings + youtube clips) ──────────────────
   recordingSave:   (opts: { name: string; buffer: Uint8Array; durationMs?: number }):
     Promise<{ ok: boolean; recording?: { id: string; name: string; file: string; url: string; createdAt: string }; error?: string }> =>
