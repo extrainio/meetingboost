@@ -193,7 +193,7 @@ def classify_detect_result(raw):
         'duration':  raw.get('duration'),
     }
 
-    if raw.get('_type') == 'playlist' and isinstance(raw.get('entries'), list):
+    if raw.get('_type') == 'playlist' and isinstance(raw.get('entries'), list) and len(raw['entries']) > 0:
         items = []
         for e in raw['entries']:
             items.append({
@@ -207,10 +207,12 @@ def classify_detect_result(raw):
     if isinstance(chapters, list) and len(chapters) > 0:
         out = []
         for c in chapters:
+            st = c.get('start_time')
+            et = c.get('end_time')
             out.append({
-                'title': c.get('title', 'Untitled'),
-                'start': float(c.get('start_time', 0)),
-                'end':   float(c.get('end_time', 0)),
+                'title': c.get('title') or 'Untitled',
+                'start': float(st if st is not None else 0),
+                'end':   float(et if et is not None else 0),
             })
         return {'kind': 'chapters', 'chapters': out, 'meta': meta}
 
@@ -253,6 +255,32 @@ class TestClassifyDetectResult(unittest.TestCase):
             '_type': 'video', 'title': 'X', 'chapters': [],
         })
         self.assertEqual(result['kind'], 'none')
+
+    def test_empty_playlist_treated_as_none(self):
+        # Symmetric with test_empty_chapters_treated_as_none: an empty
+        # playlist has no usable items, so we route it through to the
+        # 'none' branch and let the UI surface a clean error.
+        result = classify_detect_result({
+            '_type': 'playlist', 'title': 'Empty', 'entries': [],
+        })
+        self.assertEqual(result['kind'], 'none')
+
+    def test_chapters_with_null_timestamps_default_to_zero(self):
+        # yt-dlp can emit chapters with null start_time/end_time on
+        # malformed inputs. Both TS (Number(null ?? 0)) and Python should
+        # normalize to 0 rather than crashing.
+        result = classify_detect_result({
+            '_type': 'video', 'title': 'X',
+            'chapters': [
+                {'title': None, 'start_time': None, 'end_time': None},
+                {'title': 'Real', 'start_time': 5, 'end_time': 10},
+            ],
+        })
+        self.assertEqual(result['kind'], 'chapters')
+        self.assertEqual(result['chapters'][0]['title'], 'Untitled')
+        self.assertEqual(result['chapters'][0]['start'], 0.0)
+        self.assertEqual(result['chapters'][0]['end'], 0.0)
+        self.assertEqual(result['chapters'][1]['title'], 'Real')
 
 
 if __name__ == '__main__':

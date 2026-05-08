@@ -485,7 +485,7 @@ export function classifyDetectResult(raw: Record<string, unknown>): DetectResult
     duration:  raw.duration as number | undefined,
   };
 
-  if (raw._type === 'playlist' && Array.isArray(raw.entries)) {
+  if (raw._type === 'playlist' && Array.isArray(raw.entries) && raw.entries.length > 0) {
     const items: PlaylistItem[] = (raw.entries as Record<string, unknown>[]).map(e => ({
       videoId:  (e.id as string)    ?? '',
       title:    (e.title as string) ?? '',
