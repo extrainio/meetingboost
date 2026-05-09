@@ -623,6 +623,23 @@ input[type=range]::-webkit-slider-thumb:hover {
     }
   }
 
+  // Fetch the latest pack list and re-apply the current active pack.
+  // Called at init and whenever 'packs-changed' fires.
+  async function loadPacks() {
+    await loadPackData();
+    if (!activePack) return;
+
+    const stillExists = packs.some(p => p.id === activePack.id);
+    if (stillExists) {
+      applyPack(activePack.id);
+    } else if (packs.length > 0) {
+      // Active pack was deleted — fall back to the first available pack.
+      // selectPack sends 'select-pack' to main which persists the choice
+      // and re-emits 'pack-selected', which calls applyPack via onPackSelected.
+      window.electronAPI?.selectPack?.(packs[0].id);
+    }
+  }
+
   function applyPack(packId) {
     const pack = packs.find(p => p.id === packId) || packs[0];
     if (!pack) return;
@@ -809,6 +826,12 @@ input[type=range]::-webkit-slider-thumb:hover {
     applyPack(packId);
   });
 
+  // Auto-refresh the pack picker whenever the pack list changes
+  // (new yt-pack import, pack create/delete/edit from Pack Management).
+  window.electronAPI?.onPacksChanged?.(() => {
+    loadPacks();
+  });
+
   window.electronAPI?.onRecordingsChanged?.(async () => {
     if (!activePack) return;
     await loadPackData();
@@ -897,7 +920,7 @@ input[type=range]::-webkit-slider-thumb:hover {
 
   // ── Init ──────────────────────────────────────────
   window.addEventListener('DOMContentLoaded', async () => {
-    await loadPackData();
+    await loadPacks();
 
     const [savedVol, savedPack, savedDevice, onboarded] = await Promise.all([
       window.electronAPI?.getSetting('volume',             80),
