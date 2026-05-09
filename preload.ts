@@ -95,6 +95,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     Promise<{ ok: boolean; id?: string; name?: string; soundCount?: number; error?: string }> =>
     ipcRenderer.invoke('pack-import'),
 
+  // ── Virtual driver setup ─────────────────────────────────────────────────
+  detectVirtualDriver: (): Promise<{ found: boolean; deviceName?: string }> =>
+    ipcRenderer.invoke('audio-detect-virtual-driver'),
+  markBlackholeWalkthroughSeen: (): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke('audio-mark-walkthrough-seen'),
+
   // ── Push events ──────────────────────────────────────────────────────────
   onPackSelected:  (cb: (e: unknown, packId: string) => void): void =>
     void ipcRenderer.on('pack-selected', cb),
@@ -108,4 +114,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     void ipcRenderer.on('global-key', cb),
   onOutputDeviceChanged: (cb: (e: unknown, deviceId: string) => void): void =>
     void ipcRenderer.on('output-device-changed', cb),
+  onShowBlackholeWalkthrough: (cb: () => void): void =>
+    void ipcRenderer.on('show-blackhole-walkthrough', cb),
 });
