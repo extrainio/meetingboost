@@ -414,6 +414,33 @@ body.drag-active .mini-key.empty { pointer-events: auto; opacity: 0.55; }
   background: var(--amber); opacity: 0.7;
 }
 
+/* ── Clear-key × affordance ──────────────────────────── */
+.row-clear-x {
+  position: absolute; top: 4px; right: 4px;
+  width: 16px; height: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; line-height: 1;
+  color: var(--muted2);
+  background: transparent;
+  border: none; border-radius: 2px;
+  cursor: pointer; padding: 0;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s, background 0.12s;
+}
+.mini-key:hover .row-clear-x,
+.mini-key:focus-visible .row-clear-x {
+  opacity: 1;
+}
+.row-clear-x:hover {
+  color: var(--amber);
+  background: var(--amber-bg);
+}
+.row-clear-x:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--amber-ring);
+  opacity: 1;
+}
+
 /* Recordings rail above the keypad — drag sources within this same window. */
 .rec-rail {
   display: flex; align-items: center; gap: 8px;
@@ -857,7 +884,12 @@ function renderSounds() {
           <div class="mini-bottom">
             <div class="mini-name"></div>
           </div>
+          <button class="row-clear-x"
+                  aria-label="Clear ${k.toUpperCase()}"
+                  tabindex="0"
+                  data-clear-key="${k}">×</button>
         `;
+        el.setAttribute('tabindex', '0');
         el.querySelector('.mini-name').textContent = entry.label;
         el.onclick = (evt) => { fireKey(el, evt); previewSound(entry.url); };
       } else {
@@ -890,6 +922,60 @@ function renderSounds() {
     grid.appendChild(el);
   });
 }
+
+// ── Clear-key × click handler ──────────────────────
+let clearInFlight = false;
+document.getElementById('soundsGrid').addEventListener('click', async e => {
+  const btn = e.target.closest('.row-clear-x');
+  if (!btn) return;
+  e.stopPropagation();           // don't fire the tile's own onclick (previewSound)
+  if (clearInFlight) return;
+  clearInFlight = true;
+  try {
+    const key  = btn.dataset.clearKey;
+    const name = btn.closest('.mini-key')?.querySelector('.mini-name')?.textContent || key.toUpperCase();
+    const isBundled = selected?.origin !== 'user';
+    const packLabel = isBundled ? `your ${selected?.name || 'pack'}` : (selected?.name || 'this pack');
+    if (!confirm(`Clear ${key.toUpperCase()} from ${packLabel}?`)) return;
+    const res = await window.electronAPI?.packUnbindKey?.(selected.id, key);
+    if (res?.ok) {
+      const prefix = isBundled ? `Cleared ${key.toUpperCase()} from your ${selected?.name || 'pack'}` : `Cleared ${key.toUpperCase()}`;
+      showToast(res.changed ? prefix : `${key.toUpperCase()} was already empty`);
+    } else {
+      showToast(res?.error || 'Could not clear pad');
+    }
+    renderSounds();
+  } finally {
+    clearInFlight = false;
+  }
+});
+
+// ── Clear-key keyboard: Delete / Backspace on focused tile ──
+document.getElementById('soundsGrid').addEventListener('keydown', async e => {
+  if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+  const tile = e.target.closest('.mini-key[data-key]');
+  if (!tile || tile.classList.contains('empty')) return;
+  e.preventDefault();
+  e.target.blur();
+  if (clearInFlight) return;
+  clearInFlight = true;
+  try {
+    const key  = tile.dataset.key;
+    const isBundled = selected?.origin !== 'user';
+    const packLabel = isBundled ? `your ${selected?.name || 'pack'}` : (selected?.name || 'this pack');
+    if (!confirm(`Clear ${key.toUpperCase()} from ${packLabel}?`)) return;
+    const res = await window.electronAPI?.packUnbindKey?.(selected.id, key);
+    if (res?.ok) {
+      const prefix = isBundled ? `Cleared ${key.toUpperCase()} from your ${selected?.name || 'pack'}` : `Cleared ${key.toUpperCase()}`;
+      showToast(res.changed ? prefix : `${key.toUpperCase()} was already empty`);
+    } else {
+      showToast(res?.error || 'Could not clear pad');
+    }
+    renderSounds();
+  } finally {
+    clearInFlight = false;
+  }
+});
 
 // Single-voice preview — picking a different tile or chip stops the prior
 // preview immediately, and clicking the same source again toggles it off.
