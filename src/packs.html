@@ -924,23 +924,30 @@ function renderSounds() {
 }
 
 // ── Clear-key × click handler ──────────────────────
+let clearInFlight = false;
 document.getElementById('soundsGrid').addEventListener('click', async e => {
   const btn = e.target.closest('.row-clear-x');
   if (!btn) return;
   e.stopPropagation();           // don't fire the tile's own onclick (previewSound)
-  const key  = btn.dataset.clearKey;
-  const name = btn.closest('.mini-key')?.querySelector('.mini-name')?.textContent || key.toUpperCase();
-  const isBundled = selected?.origin !== 'user';
-  const packLabel = isBundled ? `your ${selected?.name || 'pack'}` : (selected?.name || 'this pack');
-  if (!confirm(`Clear ${key.toUpperCase()} from ${packLabel}?`)) return;
-  const res = await window.electronAPI?.packUnbindKey?.(selected.id, key);
-  if (res?.ok) {
-    const prefix = isBundled ? `Cleared ${key.toUpperCase()} from your ${selected?.name || 'pack'}` : `Cleared ${key.toUpperCase()}`;
-    showToast(res.changed ? prefix : `${key.toUpperCase()} was already empty`);
-  } else {
-    showToast(res?.error || 'Could not clear pad');
+  if (clearInFlight) return;
+  clearInFlight = true;
+  try {
+    const key  = btn.dataset.clearKey;
+    const name = btn.closest('.mini-key')?.querySelector('.mini-name')?.textContent || key.toUpperCase();
+    const isBundled = selected?.origin !== 'user';
+    const packLabel = isBundled ? `your ${selected?.name || 'pack'}` : (selected?.name || 'this pack');
+    if (!confirm(`Clear ${key.toUpperCase()} from ${packLabel}?`)) return;
+    const res = await window.electronAPI?.packUnbindKey?.(selected.id, key);
+    if (res?.ok) {
+      const prefix = isBundled ? `Cleared ${key.toUpperCase()} from your ${selected?.name || 'pack'}` : `Cleared ${key.toUpperCase()}`;
+      showToast(res.changed ? prefix : `${key.toUpperCase()} was already empty`);
+    } else {
+      showToast(res?.error || 'Could not clear pad');
+    }
+    renderSounds();
+  } finally {
+    clearInFlight = false;
   }
-  renderSounds();
 });
 
 // ── Clear-key keyboard: Delete / Backspace on focused tile ──
@@ -949,18 +956,25 @@ document.getElementById('soundsGrid').addEventListener('keydown', async e => {
   const tile = e.target.closest('.mini-key[data-key]');
   if (!tile || tile.classList.contains('empty')) return;
   e.preventDefault();
-  const key  = tile.dataset.key;
-  const isBundled = selected?.origin !== 'user';
-  const packLabel = isBundled ? `your ${selected?.name || 'pack'}` : (selected?.name || 'this pack');
-  if (!confirm(`Clear ${key.toUpperCase()} from ${packLabel}?`)) return;
-  const res = await window.electronAPI?.packUnbindKey?.(selected.id, key);
-  if (res?.ok) {
-    const prefix = isBundled ? `Cleared ${key.toUpperCase()} from your ${selected?.name || 'pack'}` : `Cleared ${key.toUpperCase()}`;
-    showToast(res.changed ? prefix : `${key.toUpperCase()} was already empty`);
-  } else {
-    showToast(res?.error || 'Could not clear pad');
+  e.target.blur();
+  if (clearInFlight) return;
+  clearInFlight = true;
+  try {
+    const key  = tile.dataset.key;
+    const isBundled = selected?.origin !== 'user';
+    const packLabel = isBundled ? `your ${selected?.name || 'pack'}` : (selected?.name || 'this pack');
+    if (!confirm(`Clear ${key.toUpperCase()} from ${packLabel}?`)) return;
+    const res = await window.electronAPI?.packUnbindKey?.(selected.id, key);
+    if (res?.ok) {
+      const prefix = isBundled ? `Cleared ${key.toUpperCase()} from your ${selected?.name || 'pack'}` : `Cleared ${key.toUpperCase()}`;
+      showToast(res.changed ? prefix : `${key.toUpperCase()} was already empty`);
+    } else {
+      showToast(res?.error || 'Could not clear pad');
+    }
+    renderSounds();
+  } finally {
+    clearInFlight = false;
   }
-  renderSounds();
 });
 
 // Single-voice preview — picking a different tile or chip stops the prior
