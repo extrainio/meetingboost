@@ -1513,7 +1513,11 @@ app.whenReady().then(() => {
   ensureUserDirs();
   buildAppMenu();
   createBoardWindow();
-  createTray();
+  try {
+    createTray();
+  } catch (e) {
+    console.error('createTray failed (continuing without tray):', e);
+  }
 
   // After the board finishes loading, check for a virtual audio driver.
   // If absent and the walkthrough hasn't been seen, push an event to the renderer.
