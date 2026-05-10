@@ -1059,15 +1059,17 @@ input[type=range]::-webkit-slider-thumb:hover {
     }
   }
 
-  async function reDetectVirtualDriver() {
+  async function reDetectVirtualDriver(unlock = false) {
     if (bhReDetectInFlight) return false;
     bhReDetectInFlight = true;
     try {
       let labels = [];
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(t => t.stop());
-      } catch {}
+      if (unlock) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach(t => t.stop());
+        } catch {}
+      }
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
         labels = devices.filter(d => d.kind === 'audiooutput').map(d => d.label || '');
@@ -1081,7 +1083,7 @@ input[type=range]::-webkit-slider-thumb:hover {
   }
 
   async function bhRefresh() {
-    const found = await reDetectVirtualDriver();
+    const found = await reDetectVirtualDriver(true);
     if (found) {
       await window.electronAPI?.markBlackholeWalkthroughSeen?.();
       showBlackholeWalkthrough(2);  // advance to configure step
