@@ -115,5 +115,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onOutputDeviceChanged: (cb: (e: unknown, deviceId: string) => void): void =>
     void ipcRenderer.on('output-device-changed', cb),
   onShowBlackholeWalkthrough: (cb: () => void): void =>
-    void ipcRenderer.on('show-blackhole-walkthrough', cb),
+    void ipcRenderer.once('show-blackhole-walkthrough', cb),
 });
