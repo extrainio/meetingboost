@@ -43,6 +43,16 @@ function setSetting(key: string, val: unknown): void {
   const s = readStore(); s[key] = val; writeStore(s);
 }
 
+// ── Virtual driver detection ───────────────────────────────────────────────
+//
+// Mirrored in tests/test_blackhole_detection.py.
+
+const VIRTUAL_DRIVER_RE = /BlackHole|VB-Cable|Soundflower|Loopback Audio/i;
+
+export function isVirtualAudioDevice(name: string): boolean {
+  return VIRTUAL_DRIVER_RE.test(name);
+}
+
 let boardWin: BrowserWindow | null = null;
 let childWin: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -182,6 +192,43 @@ ipcMain.on('save-setting', (_e, key: string, val: unknown) => {
 ipcMain.handle('get-setting',      (_e, key: string, fb: unknown) => getSetting(key, fb));
 ipcMain.handle('get-all-settings', () => readStore());
 ipcMain.handle('app-version',      () => app.getVersion());
+
+// Detect virtual audio driver by enumerating output devices.
+// Uses the board window's renderer context (navigator.mediaDevices) because
+// main-process code has no access to Web Audio APIs.
+// Returns { found: boolean, deviceName?: string }.
+ipcMain.handle('audio-detect-virtual-driver', async (): Promise<{ found: boolean; deviceName?: string }> => {
+  if (!boardWin || boardWin.isDestroyed()) return { found: false };
+  try {
+    // Brief getUserMedia to unlock device labels, then enumerate.
+    const result = await boardWin.webContents.executeJavaScript(`
+      (async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach(t => t.stop());
+        } catch {}
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const outputs = devices.filter(d => d.kind === 'audiooutput');
+        return outputs.map(d => d.label || '');
+      })()
+    `);
+    const labels: string[] = Array.isArray(result) ? result : [];
+    for (const label of labels) {
+      if (isVirtualAudioDevice(label)) return { found: true, deviceName: label };
+    }
+    return { found: false };
+  } catch {
+    return { found: false };
+  }
+});
+
+// Write firstRun.blackholeWalkthroughSeen = true.
+// Uses the flat key naming convention of the existing settings store.
+// Errors are caught by writeStore() internally — fail open.
+ipcMain.handle('audio-mark-walkthrough-seen', (): { ok: boolean } => {
+  setSetting('firstRun.blackholeWalkthroughSeen', true);
+  return { ok: true };
+});
 
 // Export the raw settings.json via Save dialog. Scope is intentionally just
 // preferences (not custom packs / recordings) — those move via .mbpack.
@@ -1462,6 +1509,32 @@ app.whenReady().then(() => {
   buildAppMenu();
   createBoardWindow();
   createTray();
+
+  // After the board finishes loading, check for a virtual audio driver.
+  // If absent and the walkthrough hasn't been seen, push an event to the renderer.
+  boardWin!.webContents.once('did-finish-load', async () => {
+    const seen = getSetting<boolean>('firstRun.blackholeWalkthroughSeen', false);
+    if (seen) return;
+    try {
+      const { found } = await (boardWin!.webContents.executeJavaScript(`
+        (async () => {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(t => t.stop());
+          } catch {}
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          return devices
+            .filter(d => d.kind === 'audiooutput')
+            .map(d => d.label || '');
+        })()
+      `) as Promise<string[]>).then(labels => ({
+        found: labels.some(l => isVirtualAudioDevice(l)),
+      }));
+      if (!found) {
+        boardWin!.webContents.send('show-blackhole-walkthrough');
+      }
+    } catch { /* fail open — no walkthrough is better than a crash */ }
+  });
 
   globalShortcut.register('Alt+Shift+M', () => {
     boardWin!.isVisible() ? boardWin!.hide() : (boardWin!.show(), boardWin!.focus());

@@ -485,6 +485,83 @@ input[type=range]::-webkit-slider-thumb:hover {
   border-color: var(--amber); font-weight: 900;
 }
 .onboard-btn.primary:hover { box-shadow: 0 0 18px var(--amber-glow); }
+
+/* ── BLACKHOLE WALKTHROUGH ─────────────────────── */
+/* Reuses .onboard-overlay, .onboard-card, .onboard-btn vocabulary.
+   New elements specific to this walkthrough: */
+
+.bh-brew-row {
+  display: flex; align-items: stretch; gap: 0;
+  margin: 12px 0 8px;
+  border: 1px solid var(--bhi); border-radius: 4px; overflow: hidden;
+}
+.bh-brew-cmd {
+  flex: 1;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; font-weight: 600;
+  padding: 9px 12px;
+  background: var(--s3); color: var(--amber);
+  user-select: all; letter-spacing: 0.2px;
+  border: none; outline: none;
+}
+.bh-copy-btn {
+  padding: 0 12px;
+  background: var(--s2); border: none; border-left: 1px solid var(--bhi);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--muted2); cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+.bh-copy-btn:hover { background: var(--s3); color: var(--text); }
+.bh-copy-btn.copied { color: var(--amber); }
+
+.bh-ext-link {
+  font-size: 11px; color: var(--amber);
+  text-decoration: none; display: inline-block; margin-bottom: 14px;
+}
+.bh-ext-link:hover { text-decoration: underline; }
+
+.bh-refresh-row {
+  margin-top: 12px; display: flex; flex-direction: column; gap: 6px;
+}
+.bh-refresh-tip {
+  font-size: 9px; color: var(--warn);
+  display: none; line-height: 1.5;
+}
+.bh-refresh-tip.show { display: block; }
+
+.bh-configure-pane {
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  gap: 8px; align-items: center;
+  margin: 14px 0;
+  font-size: 10px;
+}
+.bh-config-box {
+  background: var(--s3); border: 1px solid var(--bhi); border-radius: 4px;
+  padding: 10px 12px; text-align: center;
+}
+.bh-config-label {
+  font-size: 9px; color: var(--muted); margin-bottom: 4px;
+  letter-spacing: 1px; text-transform: uppercase; font-weight: 700;
+}
+.bh-config-val {
+  font-size: 11px; color: var(--amber); font-weight: 700;
+}
+.bh-config-arrow { color: var(--muted); font-size: 14px; text-align: center; }
+
+/* Footer virtual-driver warning indicator */
+.bh-footer-warn {
+  display: none; align-items: center; gap: 5px;
+  font-size: 9px; color: var(--warn); font-weight: 700;
+  letter-spacing: 0.3px; cursor: pointer;
+  padding: 4px 8px; border-radius: 3px;
+  border: 1px solid oklch(60% 0.18 25 / 28%);
+  background: oklch(60% 0.18 25 / 10%);
+  transition: background 0.12s;
+  flex-shrink: 0;
+}
+.bh-footer-warn.show { display: flex; }
+.bh-footer-warn:hover { background: oklch(60% 0.18 25 / 18%); }
 </style>
 <script>(function(){var t=localStorage.getItem('mb-theme')||'dark';document.documentElement.setAttribute('data-theme',t==='system'?(window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):t);})()</script>
 </head>
@@ -564,6 +641,9 @@ input[type=range]::-webkit-slider-thumb:hover {
     Output ·&nbsp;<span class="out-device">BlackHole 2ch</span>&nbsp;▾
   </div>
   <div class="spacer"></div>
+  <div class="bh-footer-warn" id="bhFooterWarn" onclick="bhReopenSetup()" title="No virtual driver detected — click to set up">
+    ⚠ no virtual driver · setup
+  </div>
   <div class="sess-stat">session <b id="sc">0</b> fired</div>
   <button class="btn btn-ghost"   onclick="window.electronAPI?.openPacks()">Packs</button>
   <button class="btn btn-primary" onclick="window.electronAPI?.openAddSound()">+ Add Sound</button>
@@ -586,6 +666,27 @@ input[type=range]::-webkit-slider-thumb:hover {
       <div class="onboard-btns">
         <button class="onboard-btn"         id="onboardSkip" onclick="onboardSkip()">Skip</button>
         <button class="onboard-btn primary" id="onboardNext" onclick="onboardNext()">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── BLACKHOLE WALKTHROUGH OVERLAY ───────────────────────────────────── -->
+<div class="onboard-overlay" id="bhOverlay" role="dialog" aria-modal="true" aria-labelledby="bhH">
+  <div class="onboard-card">
+    <div class="onboard-step-num" id="bhNum">Step 1 of 3</div>
+    <div class="onboard-h" id="bhH"></div>
+    <div class="onboard-body" id="bhBody"></div>
+    <div class="onboard-foot">
+      <div class="onboard-dots">
+        <div class="onboard-dot" id="bhDot0"></div>
+        <div class="onboard-dot" id="bhDot1"></div>
+        <div class="onboard-dot" id="bhDot2"></div>
+      </div>
+      <div class="onboard-btns">
+        <button class="onboard-btn" id="bhBack"  onclick="bhBack()"  style="display:none">← Back</button>
+        <button class="onboard-btn" id="bhSkip"  onclick="bhSkip()">Skip</button>
+        <button class="onboard-btn primary" id="bhNext" onclick="bhNext()">Continue →</button>
       </div>
     </div>
   </div>
@@ -860,6 +961,199 @@ input[type=range]::-webkit-slider-thumb:hover {
     outputDeviceId = deviceId || 'default';
   });
 
+  // ── BlackHole Walkthrough ─────────────────────────
+  // Three-step inline overlay for first-run virtual driver setup.
+  // Triggered by main-process 'show-blackhole-walkthrough' event.
+
+  const BH_VIRTUAL_RE = /BlackHole|VB-Cable|Soundflower|Loopback Audio/i;
+
+  let bhStep = 0;
+  let bhActive = false;
+  let bhDriverFound = false;
+  let bhReDetectInFlight = false;
+
+  const BH_STEPS = [
+    // Step 0 — Why
+    () => {
+      document.getElementById('bhNum').textContent = 'Step 1 of 3';
+      document.getElementById('bhH').textContent = 'Virtual audio cable required';
+      document.getElementById('bhBody').innerHTML =
+        'MeetingBoost needs a virtual audio cable to route sounds into ' +
+        'Zoom/Teams/Meet. BlackHole is the standard — it\'s free, open source, ' +
+        'and 30 seconds to install.';
+      document.getElementById('bhNext').textContent = 'Continue →';
+      document.getElementById('bhBack').style.display = 'none';
+      document.getElementById('bhSkip').style.display = '';
+    },
+
+    // Step 1 — Install
+    () => {
+      document.getElementById('bhNum').textContent = 'Step 2 of 3';
+      document.getElementById('bhH').textContent = 'Install BlackHole';
+      document.getElementById('bhBody').innerHTML =
+        'Option A — Homebrew (recommended):' +
+        '<div class="bh-brew-row">' +
+          '<span class="bh-brew-cmd" id="bhBrewCmd">brew install blackhole-2ch</span>' +
+          '<button class="bh-copy-btn" id="bhCopyBtn" onclick="bhCopyBrew()">Copy</button>' +
+        '</div>' +
+        'Option B — installer package:<br>' +
+        '<a class="bh-ext-link" href="#" onclick="bhOpenExternal(); return false;">' +
+          'Download from existential.audio/blackhole →' +
+        '</a>' +
+        '<div class="bh-refresh-row">' +
+          '<button class="onboard-btn primary" style="width:100%" onclick="bhRefresh()">' +
+            'I\'ve installed it — refresh devices →' +
+          '</button>' +
+          '<div class="bh-refresh-tip" id="bhRefreshTip">' +
+            'Still not seeing a virtual driver. macOS sometimes needs a logout/login after install.' +
+          '</div>' +
+        '</div>';
+      document.getElementById('bhNext').textContent = 'Next →';
+      document.getElementById('bhNext').style.display = 'none';
+      document.getElementById('bhBack').style.display = '';
+      document.getElementById('bhSkip').style.display = '';
+    },
+
+    // Step 2 — Configure
+    () => {
+      document.getElementById('bhNum').textContent = 'Step 3 of 3';
+      document.getElementById('bhH').textContent = 'Configure routing';
+      document.getElementById('bhBody').innerHTML =
+        '<div class="bh-configure-pane">' +
+          '<div class="bh-config-box">' +
+            '<div class="bh-config-label">MeetingBoost output</div>' +
+            '<div class="bh-config-val">BlackHole 2ch</div>' +
+          '</div>' +
+          '<div class="bh-config-arrow">→</div>' +
+          '<div class="bh-config-box">' +
+            '<div class="bh-config-label">Meeting app mic</div>' +
+            '<div class="bh-config-val">BlackHole 2ch</div>' +
+          '</div>' +
+        '</div>' +
+        'In MeetingBoost: <code>Settings → Audio → Virtual Output</code><br>' +
+        'In Zoom/Teams/Meet: set Microphone to <code>BlackHole 2ch</code>';
+      document.getElementById('bhNext').textContent = 'Done';
+      document.getElementById('bhNext').style.display = '';
+      document.getElementById('bhBack').style.display = '';
+      document.getElementById('bhSkip').style.display = 'none';
+    },
+  ];
+
+  function showBlackholeWalkthrough(step = 0) {
+    bhStep = step;
+    bhActive = true;
+    BH_STEPS[step]();
+    // Update progress dots
+    [0, 1, 2].forEach(i => {
+      document.getElementById('bhDot' + i).classList.toggle('active', i === step);
+    });
+    document.getElementById('bhOverlay').classList.add('show');
+  }
+
+  function hideBlackholeWalkthrough() {
+    bhActive = false;
+    document.getElementById('bhOverlay').classList.remove('show');
+    // Show footer indicator if driver still absent
+    if (!bhDriverFound) {
+      document.getElementById('bhFooterWarn').classList.add('show');
+    }
+  }
+
+  async function reDetectVirtualDriver() {
+    if (bhReDetectInFlight) return false;
+    bhReDetectInFlight = true;
+    try {
+      let labels = [];
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(t => t.stop());
+      } catch {}
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        labels = devices.filter(d => d.kind === 'audiooutput').map(d => d.label || '');
+      } catch {}
+      const found = labels.some(l => BH_VIRTUAL_RE.test(l));
+      bhDriverFound = found;
+      return found;
+    } finally {
+      bhReDetectInFlight = false;
+    }
+  }
+
+  async function bhRefresh() {
+    const found = await reDetectVirtualDriver();
+    if (found) {
+      await window.electronAPI?.markBlackholeWalkthroughSeen?.();
+      showBlackholeWalkthrough(2);  // advance to configure step
+    } else {
+      const tip = document.getElementById('bhRefreshTip');
+      if (tip) tip.classList.add('show');
+    }
+  }
+
+  function bhCopyBrew() {
+    navigator.clipboard.writeText('brew install blackhole-2ch').then(() => {
+      const btn = document.getElementById('bhCopyBtn');
+      if (!btn) return;
+      btn.textContent = 'Copied';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+    });
+  }
+
+  function bhOpenExternal() {
+    // shell.openExternal is not exposed on preload — use a link in the body instead.
+    // The <a> tag with target="_blank" works in Electron's renderer with
+    // setWindowOpenHandler allowing blank targets, but MeetingBoost uses
+    // shell.openExternal via IPC. For now, open via electronAPI if available,
+    // fall back to window.open.
+    const url = 'https://existential.audio/blackhole/';
+    if (window.electronAPI?.openExternal) {
+      window.electronAPI.openExternal(url);
+    } else {
+      window.open(url, '_blank', 'noopener');
+    }
+  }
+
+  function bhNext() {
+    if (bhStep < 2) {
+      showBlackholeWalkthrough(bhStep + 1);
+    } else {
+      // Done — step 3
+      bhDriverFound = true; // trust the user configured it
+      window.electronAPI?.markBlackholeWalkthroughSeen?.();
+      hideBlackholeWalkthrough();
+      // Suppress footer indicator — user went through the whole flow
+      document.getElementById('bhFooterWarn').classList.remove('show');
+    }
+  }
+
+  function bhBack() {
+    if (bhStep > 0) showBlackholeWalkthrough(bhStep - 1);
+  }
+
+  function bhSkip() {
+    window.electronAPI?.markBlackholeWalkthroughSeen?.();
+    hideBlackholeWalkthrough();
+  }
+
+  function bhReopenSetup() {
+    // Re-entry from footer indicator — jump straight to Install (step 1)
+    document.getElementById('bhFooterWarn').classList.remove('show');
+    showBlackholeWalkthrough(1);
+  }
+
+  // On app focus regain while stuck on the Install step, silently re-detect.
+  // If BlackHole now exists, auto-advance to Configure.
+  window.addEventListener('focus', async () => {
+    if (!bhActive || bhStep !== 1) return;
+    const found = await reDetectVirtualDriver();
+    if (found) {
+      await window.electronAPI?.markBlackholeWalkthroughSeen?.();
+      showBlackholeWalkthrough(2);
+    }
+  });
+
   // ── Onboarding ────────────────────────────────────
   const ONBOARD_STEPS = [
     {
@@ -922,11 +1216,12 @@ input[type=range]::-webkit-slider-thumb:hover {
   window.addEventListener('DOMContentLoaded', async () => {
     await loadPacks();
 
-    const [savedVol, savedPack, savedDevice, onboarded] = await Promise.all([
-      window.electronAPI?.getSetting('volume',             80),
-      window.electronAPI?.getSetting('activePack',         'classics'),
-      window.electronAPI?.getSetting('outputDeviceId',     'default'),
-      window.electronAPI?.getSetting('onboardingComplete', false),
+    const [savedVol, savedPack, savedDevice, onboarded, bhSeen] = await Promise.all([
+      window.electronAPI?.getSetting('volume',                          80),
+      window.electronAPI?.getSetting('activePack',                     'classics'),
+      window.electronAPI?.getSetting('outputDeviceId',                  'default'),
+      window.electronAPI?.getSetting('onboardingComplete',              false),
+      window.electronAPI?.getSetting('firstRun.blackholeWalkthroughSeen', false),
     ]);
 
     if (savedVol != null) {
@@ -941,6 +1236,33 @@ input[type=range]::-webkit-slider-thumb:hover {
     applyPack(savedPack || 'classics');
 
     if (!onboarded) showOnboard(0);
+
+    // Wire the BlackHole walkthrough push event from main.
+    // Main sends this after 'did-finish-load' if no virtual driver is found
+    // and the walkthrough hasn't been seen yet.
+    window.electronAPI?.onShowBlackholeWalkthrough?.(() => {
+      // If general onboarding is still running, wait for it to finish first.
+      if (!onboarded) {
+        // Patch onboardFinish to chain into BH walkthrough
+        const origFinish = window.onboardFinish;
+        window.onboardFinish = function() {
+          origFinish?.();
+          showBlackholeWalkthrough(0);
+        };
+      } else {
+        showBlackholeWalkthrough(0);
+      }
+    });
+
+    // If walkthrough was seen but we still can't detect a driver, show indicator.
+    // (A fresh non-seen state means main will push 'show-blackhole-walkthrough'
+    // via the event listener above.)
+    if (bhSeen) {
+      const found = await reDetectVirtualDriver();
+      if (!found) {
+        document.getElementById('bhFooterWarn').classList.add('show');
+      }
+    }
   });
 </script>
 </body>
