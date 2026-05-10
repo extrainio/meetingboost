@@ -95,6 +95,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     Promise<{ ok: boolean; id?: string; name?: string; soundCount?: number; error?: string }> =>
     ipcRenderer.invoke('pack-import'),
 
+  // ── Shell helpers ────────────────────────────────────────────────────────
+  openExternal: (url: string): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke('open-external', url),
+
   // ── Virtual driver setup ─────────────────────────────────────────────────
   detectVirtualDriver: (): Promise<{ found: boolean; deviceName?: string }> =>
     ipcRenderer.invoke('audio-detect-virtual-driver'),

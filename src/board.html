@@ -1104,17 +1104,8 @@ input[type=range]::-webkit-slider-thumb:hover {
   }
 
   function bhOpenExternal() {
-    // shell.openExternal is not exposed on preload — use a link in the body instead.
-    // The <a> tag with target="_blank" works in Electron's renderer with
-    // setWindowOpenHandler allowing blank targets, but MeetingBoost uses
-    // shell.openExternal via IPC. For now, open via electronAPI if available,
-    // fall back to window.open.
     const url = 'https://existential.audio/blackhole/';
-    if (window.electronAPI?.openExternal) {
-      window.electronAPI.openExternal(url);
-    } else {
-      window.open(url, '_blank', 'noopener');
-    }
+    window.electronAPI?.openExternal?.(url);
   }
 
   function bhNext() {

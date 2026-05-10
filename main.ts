@@ -1,7 +1,7 @@
 import {
   app, BrowserWindow, ipcMain, globalShortcut,
   Tray, nativeImage, Menu, screen, session, dialog,
-  systemPreferences,
+  systemPreferences, shell,
 } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -218,6 +218,13 @@ ipcMain.handle('audio-detect-virtual-driver', async (): Promise<{ found: boolean
   } catch {
     return { found: false };
   }
+});
+
+// Open a URL in the system's default browser via shell.openExternal.
+// Safer than window.open in Electron's renderer, which requires setWindowOpenHandler.
+ipcMain.handle('open-external', async (_e, url: string): Promise<{ ok: boolean }> => {
+  await shell.openExternal(url);
+  return { ok: true };
 });
 
 // Write firstRun.blackholeWalkthroughSeen = true.
