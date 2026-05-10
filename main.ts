@@ -221,8 +221,10 @@ ipcMain.handle('audio-detect-virtual-driver', async (): Promise<{ found: boolean
 });
 
 // Open a URL in the system's default browser via shell.openExternal.
-// Safer than window.open in Electron's renderer, which requires setWindowOpenHandler.
+// Restricted to http(s) so the bridge can't be used to launch file://, javascript:,
+// or custom-protocol URIs from any future caller.
 ipcMain.handle('open-external', async (_e, url: string): Promise<{ ok: boolean }> => {
+  if (!/^https?:\/\//i.test(url)) return { ok: false };
   await shell.openExternal(url);
   return { ok: true };
 });
