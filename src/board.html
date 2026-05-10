@@ -1059,15 +1059,17 @@ input[type=range]::-webkit-slider-thumb:hover {
     }
   }
 
-  async function reDetectVirtualDriver() {
+  async function reDetectVirtualDriver(unlock = false) {
     if (bhReDetectInFlight) return false;
     bhReDetectInFlight = true;
     try {
       let labels = [];
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(t => t.stop());
-      } catch {}
+      if (unlock) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          stream.getTracks().forEach(t => t.stop());
+        } catch {}
+      }
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
         labels = devices.filter(d => d.kind === 'audiooutput').map(d => d.label || '');
@@ -1081,7 +1083,7 @@ input[type=range]::-webkit-slider-thumb:hover {
   }
 
   async function bhRefresh() {
-    const found = await reDetectVirtualDriver();
+    const found = await reDetectVirtualDriver(true);
     if (found) {
       await window.electronAPI?.markBlackholeWalkthroughSeen?.();
       showBlackholeWalkthrough(2);  // advance to configure step
@@ -1102,17 +1104,8 @@ input[type=range]::-webkit-slider-thumb:hover {
   }
 
   function bhOpenExternal() {
-    // shell.openExternal is not exposed on preload — use a link in the body instead.
-    // The <a> tag with target="_blank" works in Electron's renderer with
-    // setWindowOpenHandler allowing blank targets, but MeetingBoost uses
-    // shell.openExternal via IPC. For now, open via electronAPI if available,
-    // fall back to window.open.
     const url = 'https://existential.audio/blackhole/';
-    if (window.electronAPI?.openExternal) {
-      window.electronAPI.openExternal(url);
-    } else {
-      window.open(url, '_blank', 'noopener');
-    }
+    window.electronAPI?.openExternal?.(url);
   }
 
   function bhNext() {
@@ -1210,6 +1203,7 @@ input[type=range]::-webkit-slider-thumb:hover {
   function onboardFinish() {
     document.getElementById('onboardOverlay').classList.remove('show');
     window.electronAPI?.saveSetting('onboardingComplete', true);
+    window.dispatchEvent(new CustomEvent('onboarding:finished'));
   }
 
   // ── Init ──────────────────────────────────────────
@@ -1243,12 +1237,7 @@ input[type=range]::-webkit-slider-thumb:hover {
     window.electronAPI?.onShowBlackholeWalkthrough?.(() => {
       // If general onboarding is still running, wait for it to finish first.
       if (!onboarded) {
-        // Patch onboardFinish to chain into BH walkthrough
-        const origFinish = window.onboardFinish;
-        window.onboardFinish = function() {
-          origFinish?.();
-          showBlackholeWalkthrough(0);
-        };
+        window.addEventListener('onboarding:finished', () => showBlackholeWalkthrough(0), { once: true });
       } else {
         showBlackholeWalkthrough(0);
       }

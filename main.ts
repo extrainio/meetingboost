@@ -1,7 +1,7 @@
 import {
   app, BrowserWindow, ipcMain, globalShortcut,
   Tray, nativeImage, Menu, screen, session, dialog,
-  systemPreferences,
+  systemPreferences, shell,
 } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -200,13 +200,11 @@ ipcMain.handle('app-version',      () => app.getVersion());
 ipcMain.handle('audio-detect-virtual-driver', async (): Promise<{ found: boolean; deviceName?: string }> => {
   if (!boardWin || boardWin.isDestroyed()) return { found: false };
   try {
-    // Brief getUserMedia to unlock device labels, then enumerate.
+    // Enumerate-only: no getUserMedia so we don't trigger the TCC prompt.
+    // If labels are empty (no prior mic permission), detection returns false
+    // and the walkthrough shows — the Refresh button inside it requests permission.
     const result = await boardWin.webContents.executeJavaScript(`
       (async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          stream.getTracks().forEach(t => t.stop());
-        } catch {}
         const devices = await navigator.mediaDevices.enumerateDevices();
         const outputs = devices.filter(d => d.kind === 'audiooutput');
         return outputs.map(d => d.label || '');
@@ -220,6 +218,13 @@ ipcMain.handle('audio-detect-virtual-driver', async (): Promise<{ found: boolean
   } catch {
     return { found: false };
   }
+});
+
+// Open a URL in the system's default browser via shell.openExternal.
+// Safer than window.open in Electron's renderer, which requires setWindowOpenHandler.
+ipcMain.handle('open-external', async (_e, url: string): Promise<{ ok: boolean }> => {
+  await shell.openExternal(url);
+  return { ok: true };
 });
 
 // Write firstRun.blackholeWalkthroughSeen = true.
@@ -1508,7 +1513,11 @@ app.whenReady().then(() => {
   ensureUserDirs();
   buildAppMenu();
   createBoardWindow();
-  createTray();
+  try {
+    createTray();
+  } catch (e) {
+    console.error('createTray failed (continuing without tray):', e);
+  }
 
   // After the board finishes loading, check for a virtual audio driver.
   // If absent and the walkthrough hasn't been seen, push an event to the renderer.
@@ -1518,10 +1527,6 @@ app.whenReady().then(() => {
     try {
       const { found } = await (boardWin!.webContents.executeJavaScript(`
         (async () => {
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach(t => t.stop());
-          } catch {}
           const devices = await navigator.mediaDevices.enumerateDevices();
           return devices
             .filter(d => d.kind === 'audiooutput')
