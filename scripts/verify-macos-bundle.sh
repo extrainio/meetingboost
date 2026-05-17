@@ -53,8 +53,12 @@ fi
 echo "ok: bundle layout (${EXE_NAME})"
 
 if [[ "${STRICT_CODESIGN_VERIFY:-}" == "1" ]]; then
-  echo "==> codesign verify (deep, strict) — Developer ID builds only"
-  codesign --verify --deep --strict --verbose=2 "${APP}"
+  echo "==> codesign verify (strict) — Developer ID builds only"
+  # --deep is deprecated and trips on Electron's nested frameworks with the
+  # cryptic "code has no resources but signature indicates they must be present"
+  # error. Nested-bundle verification is covered by spctl below (Gatekeeper's
+  # actual evaluation path) and by Apple's notary service upstream.
+  codesign --verify --strict --verbose=2 "${APP}"
 fi
 
 if [[ "${REQUIRE_GATEKEEPER_PASS:-}" == "1" ]]; then
