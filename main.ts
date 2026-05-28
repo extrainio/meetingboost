@@ -6,35 +6,25 @@ import {
 import * as path from 'path';
 import * as fs from 'fs';
 import { pathToFileURL } from 'url';
-import { spawn } from 'child_process';
-import ffmpegStatic from 'ffmpeg-static';
 import { GlobalKeyboardListener } from 'node-global-key-listener';
 
+import {
+  storeFile, userRoot, userPacksFile, userSoundsDir,
+  userRecordingsDir, userRecordingsFile, customSoundsDir,
+  ensureUserDirs, bundledPacksFile, bundledSoundsRoot,
+} from './src/main/paths.js';
+import { findBin, spawnPromise } from './src/main/tools.js';
+
 const isDev = process.env.ELECTRON_IS_DEV === '1';
-const storeFile = path.join(app.getPath('userData'), 'settings.json');
-
-// User-writable roots — never use __dirname for these. In packaged builds,
-// __dirname resolves inside app.asar (read-only); user content must live in
-// app.getPath('userData').
-const userRoot         = (): string => app.getPath('userData');
-const userPacksFile    = (): string => path.join(userRoot(), 'packs.json');
-const userSoundsDir    = (): string => path.join(userRoot(), 'sounds');
-const userRecordingsDir   = (): string => path.join(userRoot(), 'recordings');
-const userRecordingsFile  = (): string => path.join(userRoot(), 'recordings.json');
-
-function ensureUserDirs(): void {
-  fs.mkdirSync(userSoundsDir(),     { recursive: true });
-  fs.mkdirSync(userRecordingsDir(), { recursive: true });
-}
 
 type Store = Record<string, unknown>;
 
 function readStore(): Store {
-  try { return JSON.parse(fs.readFileSync(storeFile, 'utf8')) as Store; }
+  try { return JSON.parse(fs.readFileSync(storeFile(), 'utf8')) as Store; }
   catch { return {}; }
 }
 function writeStore(data: Store): void {
-  try { fs.writeFileSync(storeFile, JSON.stringify(data, null, 2)); } catch {}
+  try { fs.writeFileSync(storeFile(), JSON.stringify(data, null, 2)); } catch {}
 }
 function getSetting<T>(key: string, fallback: T): T {
   return (readStore()[key] as T) ?? fallback;
@@ -260,7 +250,7 @@ ipcMain.handle('settings-export', async () => {
 // re-broadcast a few effects (theme, opacity, alwaysOnTop) so the open
 // windows reflect the reset without a manual reload.
 ipcMain.handle('settings-reset', () => {
-  try { fs.unlinkSync(storeFile); } catch {}
+  try { fs.unlinkSync(storeFile()); } catch {}
   for (const k of ['theme', 'windowOpacity', 'alwaysOnTop']) {
     applySettingSideEffect(k, getSetting(k, k === 'alwaysOnTop' ? true : k === 'windowOpacity' ? 100 : 'dark'));
   }
@@ -358,63 +348,6 @@ function startGlobalCapture(): void {
 function stopGlobalCapture(): void {
   try { kbListener?.kill(); } catch {}
   kbListener = null;
-}
-
-// ── External-tool helpers ────────────────────────────────────────────────────
-
-// Search PATH locations where yt-dlp / ffmpeg are commonly installed on macOS
-const TOOL_PATHS = [
-  '/opt/homebrew/bin', '/usr/local/bin', '/opt/miniconda3/bin',
-  '/usr/bin', '/bin',
-];
-
-/**
- * Returns the absolute path to the ffmpeg binary bundled via `ffmpeg-static`.
- * In packaged builds the file lives inside `app.asar.unpacked` (we configure
- * electron-builder to unpack node_modules/ffmpeg-static, since asar contents
- * cannot be exec'd). The npm package returns the in-asar path at require time;
- * we patch it to the unpacked location at runtime.
- */
-function bundledFfmpeg(): string | null {
-  if (!ffmpegStatic) return null;
-  const patched = (ffmpegStatic as string).replace('app.asar' + path.sep, 'app.asar.unpacked' + path.sep);
-  return fs.existsSync(patched) ? patched : null;
-}
-
-function findBin(name: string): string {
-  if (name === 'ffmpeg') {
-    const bundled = bundledFfmpeg();
-    if (bundled) return bundled;
-  }
-  for (const dir of TOOL_PATHS) {
-    const full = path.join(dir, name);
-    if (fs.existsSync(full)) return full;
-  }
-  return name; // fall back to PATH lookup
-}
-
-function spawnPromise(
-  bin: string, args: string[],
-  opts: { capture?: boolean; cwd?: string } = {}
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const proc = spawn(bin, args, opts.cwd ? { cwd: opts.cwd } : {});
-    let out = '';
-    let err = '';
-    if (opts.capture) proc.stdout.on('data', (d: Buffer) => { out += d.toString(); });
-    proc.stderr.on('data', (d: Buffer)  => { err += d.toString(); });
-    // Without an 'error' handler, missing binaries (ENOENT) silently leave the
-    // promise pending — that was the "Saving…" hang in packaged builds.
-    proc.on('error', (e) => {
-      const msg = (e as NodeJS.ErrnoException).code === 'ENOENT'
-        ? `Required tool '${path.basename(bin)}' was not found. Install it and retry.`
-        : (e as Error).message;
-      reject(new Error(msg));
-    });
-    proc.on('close', (code) =>
-      code === 0 ? resolve(out) : reject(new Error(err.slice(0, 400) || `exit ${code}`))
-    );
-  });
 }
 
 // ── Pack storage ─────────────────────────────────────────────────────────────
@@ -561,13 +494,6 @@ export function classifyDetectResult(raw: Record<string, unknown>): DetectResult
   return { kind: 'none', meta };
 }
 
-function bundledPacksFile(): string {
-  return path.join(__dirname, 'src', 'packs.json');
-}
-function bundledSoundsRoot(): string {
-  return path.join(__dirname, 'src', 'sounds');
-}
-
 function tagBundledEntries(p: PackEntry): PackEntry {
   // Every entry in a bundled pack file is, by definition, a bundled asset.
   const keys: Record<string, SoundEntry> = {};
@@ -666,12 +592,6 @@ function refreshBoardIfActivePackIs(packId: string): void {
   if (getSetting<string>('activePack', 'classics') === packId) {
     boardWin?.webContents.send('pack-selected', packId);
   }
-}
-
-function customSoundsDir(): string {
-  const dir = path.join(userSoundsDir(), 'custom');
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
 }
 
 ipcMain.handle('yt-info', async (_e, url: string) => {
