@@ -2,9 +2,9 @@
 
 All notable changes to MeetingBoost. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0-rc1] — 2026-05-28
+## [1.0.0] — 2026-05-28
 
-First release candidate. Feature-complete; awaiting Apple Developer ID + notarisation to ship as 1.0.0 (see [SHIPPING.md](./SHIPPING.md)).
+First stable release. Code signed with Developer ID and notarised; the DMG passes Gatekeeper on a clean Mac without right-click → Open.
 
 ### Added
 - **`mbpack://` install links.** Share any pack as a one-click URL. The Packs window has a new Share button that wraps a hosted .mbpack URL into an `mbpack://import?url=…` link; clicking the link in any app downloads the archive (https-only, redirect-limited) and installs after an explicit confirmation dialog.
