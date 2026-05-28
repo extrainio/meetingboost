@@ -41,6 +41,9 @@ jobs:
       - name: Run unit tests (sound integrity)
         run: python3 -m pytest tests/test_sounds.py -v
 
+      - name: Vitest (per-module unit tests)
+        run: npm run test:unit
+
       - name: Run YouTube pipeline unit tests
         run: python3 -m pytest tests/test_youtube_download.py::TestTimeParsing tests/test_youtube_download.py::TestPacksJsonUpdate -v
 
