@@ -35,8 +35,18 @@ make sounds            # download the sound packs (~10 MB)
 ## Architecture
 
 ```
-main.ts        Electron main: windows, tray, global shortcut, IPC, settings store
+main.ts        Electron app lifecycle + IPC registration table — no business logic
 preload.ts     contextBridge surface — narrow, per-renderer API
+src/main/      domain modules called from main.ts's IPC table
+  paths.ts          filesystem locations
+  tools.ts          external binary resolution (yt-dlp, ffmpeg)
+  settings.ts       settings store + side-effect dispatcher
+  audio.ts          virtual driver detection + accessibility
+  recording.ts      voice recording CRUD
+  youtube.ts        yt-dlp pipeline + snippet helpers
+  packs.ts          pack CRUD + import/export
+  library.ts        cross-cutting library handlers
+  windows.ts        window/tray/keyboard + window-coupled IPC
 src/
   board.html         the soundboard window (520×580)
   packs.html         pack browser
@@ -46,10 +56,13 @@ src/
   sounds/<id>/       MP3s grouped by pack id
 assets/        logo, screenshots, example .mbpack
 scripts/       Python download helpers, bash build helpers
-tests/         pytest + playwright
+tests/         pytest + playwright + per-module Vitest (tests/unit/)
+docs/adr/      Architecture Decision Records
 ```
 
 Renderer pages share OKLCH design tokens but do not share JS. They are isolated by design.
+
+Main-process modules in `src/main/` are imported as namespaces (`import * as packs from './packs.js'`). Each module owns its `ipcMain.handle(...)` IPC channels via the table in `main.ts`, except `windows.ts` which owns the six window-coupled `ipcMain.on(...)` handlers directly (documented exception — see [`docs/adr/0001-runtime-and-architecture.md`](./docs/adr/0001-runtime-and-architecture.md)).
 
 ## Don'ts
 
