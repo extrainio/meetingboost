@@ -65,7 +65,9 @@ export function applySideEffect(key: string, val: unknown): void {
       childWin?.webContents.send('theme-changed', val);
       break;
     case 'windowOpacity': {
-      const op = sideEffects.clamp01(Number(val) / 100);
+      // Mirror createBoardWindow's clamp: 30% floor, 100% ceiling, NaN → 1.
+      const raw = Number(val) / 100;
+      const op = Math.max(0.3, Math.min(1, isNaN(raw) ? 1 : raw));
       boardWin?.setOpacity(op);
       break;
     }
@@ -90,7 +92,6 @@ export function applySideEffect(key: string, val: unknown): void {
 interface SideEffectDeps {
   getBoardWin: () => BrowserWindowType | null;
   getChildWin: () => BrowserWindowType | null;
-  clamp01: (n: number) => number;
   startGlobalCapture: () => void;
   stopGlobalCapture: () => void;
 }
@@ -98,7 +99,6 @@ interface SideEffectDeps {
 const sideEffects: SideEffectDeps = {
   getBoardWin: () => null,
   getChildWin: () => null,
-  clamp01: (n) => n,
   startGlobalCapture: () => {},
   stopGlobalCapture: () => {},
 };
