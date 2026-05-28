@@ -948,14 +948,14 @@ input[type=range]::-webkit-slider-thumb:hover {
           <div class="srow">
             <div class="srow-info">
               <div class="srow-label">Check for Updates</div>
-              <div class="srow-hint">Last checked: today</div>
+              <div class="srow-hint" id="updateHint">Not checked yet</div>
             </div>
             <div class="srow-ctrl">
-              <div class="status-chip ok" style="margin-right:8px;">
+              <div class="status-chip ok" id="updateChip" style="margin-right:8px;">
                 <div class="status-pip"></div>
-                Up to date
+                <span id="updateChipLabel">Unknown</span>
               </div>
-              <button class="btn-sm btn-sm-ghost" onclick="showToast('Checking for updates...')">Check Now</button>
+              <button class="btn-sm btn-sm-ghost" id="updateCheckBtn" onclick="runUpdateCheck()">Check Now</button>
             </div>
           </div>
         </div>
@@ -1247,6 +1247,46 @@ input[type=range]::-webkit-slider-thumb:hover {
     showToast('Settings reset — reload to fully refresh this window');
     // Reload after a beat so the toast is visible.
     setTimeout(() => location.reload(), 800);
+  }
+
+  async function runUpdateCheck() {
+    const btn   = document.getElementById('updateCheckBtn');
+    const chip  = document.getElementById('updateChip');
+    const lbl   = document.getElementById('updateChipLabel');
+    const hint  = document.getElementById('updateHint');
+    if (!btn || !chip || !lbl || !hint) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Checking…';
+    chip.classList.remove('ok', 'warn');
+    lbl.textContent = 'Checking…';
+
+    const r = await window.electronAPI?.checkForUpdate?.();
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (!r) {
+      chip.classList.add('warn');
+      lbl.textContent  = 'Unavailable';
+      hint.textContent = 'Update check is not available in this build.';
+    } else if (r.status === 'up-to-date') {
+      chip.classList.add('ok');
+      lbl.textContent  = 'Up to date';
+      hint.textContent = `Last checked at ${now} · v${r.current}`;
+    } else if (r.status === 'available') {
+      chip.classList.add('warn');
+      lbl.textContent  = `v${r.latest} available`;
+      hint.textContent = `Last checked at ${now} · running v${r.current}`;
+      if (confirm(`MeetingBoost ${r.latest} is available. Open the download page?`)) {
+        await window.electronAPI?.openExternal?.(r.url);
+      }
+    } else {
+      chip.classList.add('warn');
+      lbl.textContent  = 'Check failed';
+      hint.textContent = `Last attempt at ${now} · ${r.reason}`;
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Check Now';
   }
 </script>
 </body>

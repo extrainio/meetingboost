@@ -8,6 +8,7 @@ import * as youtube from './src/main/youtube.js';
 import * as packs from './src/main/packs.js';
 import * as library from './src/main/library.js';
 import * as protocol from './src/main/protocol.js';
+import * as updates from './src/main/updates.js';
 import * as windows from './src/main/windows.js';
 
 // Wire main-process deps the settings module needs to dispatch side effects.
@@ -27,6 +28,20 @@ recording.configure({ getBoardWin: windows.getBoardWin, getChildWin: windows.get
 packs.configure({     getBoardWin: windows.getBoardWin, getChildWin: windows.getChildWin });
 library.configure({   getBoardWin: windows.getBoardWin, getChildWin: windows.getChildWin });
 protocol.configure({  getBoardWin: windows.getBoardWin, getChildWin: windows.getChildWin });
+
+// updates.checkForUpdate() flips pendingUpdate state; the tray menu reads it
+// via the trayExtras builder below. The callback lets updates.ts stay
+// oblivious to the tray.
+updates.configure({ onPendingUpdateChanged: () => windows.rebuildTrayMenu() });
+windows.setTrayExtras(() => {
+  const pending = updates.getPendingUpdate();
+  const item: Electron.MenuItemConstructorOptions = pending
+    ? { label: `Update available — v${pending.latest}`,
+        click: () => { void shell.openExternal(pending.url); } }
+    : { label: 'Check for Updates…',
+        click: () => { void updates.checkForUpdateInteractive(); } };
+  return [item, { type: 'separator' }];
+});
 
 // Single-instance lock — required so a second launch (e.g. user clicks an
 // mbpack:// link while the app is already running on Windows/Linux) routes
@@ -120,6 +135,9 @@ ipcMain.handle('pack-import',     ()                            => packs.importP
 ipcMain.handle('library-add-from-clip',          (_e, opts) => library.addFromClip(opts));
 ipcMain.handle('library-create-pack-from-clips', (_e, opts) => library.createPackFromClips(opts));
 
+// updates
+ipcMain.handle('check-for-update', () => updates.checkForUpdate());
+
 // ── App lifecycle ────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
   // Allow getUserMedia({audio:true}) without a prompt — macOS still gates
@@ -172,6 +190,12 @@ app.whenReady().then(() => {
 
   // mbpack:// URL that arrived during cold-start, before app was ready.
   protocol.drainPending();
+
+  // Background update check — packaged builds only, opt-out via Settings → About.
+  // 5s delay so we don't compete with first-paint or the BlackHole walkthrough.
+  if (app.isPackaged && settings.get<boolean>('autoUpdate', true)) {
+    setTimeout(() => { void updates.checkForUpdate().catch(() => {}); }, 5000);
+  }
 
   app.on('activate', () => {
     const w = windows.getBoardWin();
