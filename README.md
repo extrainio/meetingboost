@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="MeetingBoost logo" width="160" height="160" />
+  <a href="https://extrainio.github.io/meetingboost/">
+    <img src="assets/logo.svg" alt="MeetingBoost logo" width="160" height="160" />
+  </a>
 </p>
 
 <h1 align="center">MeetingBoost</h1>
@@ -7,6 +9,10 @@
 <p align="center">
   <strong>A keyboard-driven soundboard for macOS meetings.</strong><br>
   Press <kbd>Q</kbd> for a rimshot. Press <kbd>W</kbd> for a sad trombone. Win the call.
+</p>
+
+<p align="center">
+  🌐 <strong><a href="https://extrainio.github.io/meetingboost/">extrainio.github.io/meetingboost</a></strong>
 </p>
 
 <p align="center">
@@ -23,12 +29,12 @@
     <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" />
   </a>
   <img alt="Platform: macOS 13+" src="https://img.shields.io/badge/platform-macOS%2013%2B-lightgrey?style=flat-square&logo=apple" />
-  <img alt="Built with Electron" src="https://img.shields.io/badge/electron-32-47848F?style=flat-square&logo=electron&logoColor=white" />
+  <img alt="Built with Electron" src="https://img.shields.io/badge/electron-39-47848F?style=flat-square&logo=electron&logoColor=white" />
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178c6?style=flat-square&logo=typescript&logoColor=white" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/extrain-pascal/meetingboost/releases/latest"><strong>↓ Download for macOS</strong></a> ·
+  <a href="https://github.com/extrainio/meetingboost/releases/latest"><strong>↓ Download for macOS</strong></a> ·
   <a href="https://extrainio.github.io/meetingboost/">Website</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#showcase">Showcase</a> ·

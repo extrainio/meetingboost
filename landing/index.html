@@ -16,6 +16,7 @@
 <meta property="og:image:alt" content="The MeetingBoost board with two keys lit in amber after firing a sound" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:image" content="https://extrainio.github.io/meetingboost/assets/screenshots/board-lit.png" />
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -149,6 +150,12 @@ body {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   letter-spacing: .04em;
+}
+
+@media (max-width: 640px) {
+  .statusbar { padding: 8px 14px; gap: 10px; font-size: 0.7rem; }
+  .statusbar .live-readout { display: none; }
+  .statusbar nav { gap: 14px; }
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
