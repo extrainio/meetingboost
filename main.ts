@@ -9,14 +9,15 @@ import { pathToFileURL } from 'url';
 import { GlobalKeyboardListener } from 'node-global-key-listener';
 
 import {
-  userRoot, userPacksFile, userSoundsDir,
+  userPacksFile, userSoundsDir,
   userRecordingsDir, customSoundsDir,
   ensureUserDirs, bundledPacksFile, bundledSoundsRoot,
 } from './src/main/paths.js';
-import { findBin, spawnPromise } from './src/main/tools.js';
+import { spawnPromise } from './src/main/tools.js';
 import * as settings from './src/main/settings.js';
 import * as audio from './src/main/audio.js';
 import * as recording from './src/main/recording.js';
+import * as youtube from './src/main/youtube.js';
 
 const isDev = process.env.ELECTRON_IS_DEV === '1';
 
@@ -289,54 +290,10 @@ function slugify(name: string, fallback = 'sound'): string {
 
 // ── YouTube Pack helpers ───────────────────────────────────────────────────
 //
-// Pure functions used by yt-detect-snippets / yt-prepare-pack / library-
-// create-pack-from-clips. Mirrored in tests/test_youtube_pack.py — note the
-// Python mirror uses snake_case keys (overflow_count) per Python convention;
-// these helpers' return shapes are not part of any IPC contract.
-
-const MIN_SNIPPET_SEC = 0.3;
-const MAX_SNIPPET_SEC_AUTOCHECK = 30.0;
-const MAX_KEYS = 15;
-const KEY_ORDER = ['q','w','e','r','t','a','s','d','f','g','z','x','c','v','b'];
-
-interface RawChapter { title: string; start: number; end: number; }
-interface FilteredSnippet {
-  title: string; start: number; end: number; dur: number;
-  autoCheck: boolean; reason: 'too_long' | null;
-}
-
-export function filterSnippets(chapters: RawChapter[]): FilteredSnippet[] {
-  const out: FilteredSnippet[] = [];
-  for (const ch of chapters) {
-    const dur = ch.end - ch.start;
-    if (dur < MIN_SNIPPET_SEC) continue;
-    const tooLong = dur > MAX_SNIPPET_SEC_AUTOCHECK;
-    out.push({
-      title: ch.title,
-      start: ch.start,
-      end: ch.end,
-      dur,
-      autoCheck: !tooLong,
-      reason: tooLong ? 'too_long' : null,
-    });
-  }
-  return out;
-}
-
-interface KeyAssignment<T> { snippet: T; key: string; }
-
-export function mapSnippetsToKeys<T>(
-  snippets: T[]
-): { mapped: KeyAssignment<T>[]; overflowCount: number } {
-  const mapped: KeyAssignment<T>[] = [];
-  for (let i = 0; i < Math.min(snippets.length, MAX_KEYS); i++) {
-    mapped.push({ snippet: snippets[i], key: KEY_ORDER[i] });
-  }
-  return {
-    mapped,
-    overflowCount: Math.max(0, snippets.length - MAX_KEYS),
-  };
-}
+// Snippet → keyboard-pack transforms (filterSnippets / mapSnippetsToKeys /
+// classifyDetectResult) and the yt-dlp/ffmpeg orchestration now live in
+// src/main/youtube.ts. slugifyPackName stays here because the library-*
+// handlers (Task 6) still call it directly.
 
 export function slugifyPackName(
   name: string,
@@ -357,45 +314,6 @@ export function slugifyPackName(
   }
 
   return { finalName, packId: slug };
-}
-
-interface DetectMeta { title: string; thumbnail: string; duration?: number; }
-
-interface PlaylistItem { videoId: string; title: string; duration?: number; }
-interface ChapterItem  { title: string; start: number; end: number; }
-
-type DetectResult =
-  | { kind: 'playlist';  items:    PlaylistItem[]; meta: DetectMeta }
-  | { kind: 'chapters';  chapters: ChapterItem[];  meta: DetectMeta }
-  | { kind: 'none';      meta: DetectMeta };
-
-export function classifyDetectResult(raw: Record<string, unknown>): DetectResult {
-  const meta: DetectMeta = {
-    title:     (raw.title as string)     ?? '',
-    thumbnail: (raw.thumbnail as string) ?? '',
-    duration:  raw.duration as number | undefined,
-  };
-
-  if (raw._type === 'playlist' && Array.isArray(raw.entries) && raw.entries.length > 0) {
-    const items: PlaylistItem[] = (raw.entries as Record<string, unknown>[]).map(e => ({
-      videoId:  (e.id as string)    ?? '',
-      title:    (e.title as string) ?? '',
-      duration: e.duration as number | undefined,
-    }));
-    return { kind: 'playlist', items, meta };
-  }
-
-  const chapters = raw.chapters;
-  if (Array.isArray(chapters) && chapters.length > 0) {
-    const out: ChapterItem[] = (chapters as Record<string, unknown>[]).map(c => ({
-      title: (c.title as string) ?? 'Untitled',
-      start: Number(c.start_time ?? 0),
-      end:   Number(c.end_time ?? 0),
-    }));
-    return { kind: 'chapters', chapters: out, meta };
-  }
-
-  return { kind: 'none', meta };
 }
 
 function tagBundledEntries(p: PackEntry): PackEntry {
@@ -498,201 +416,16 @@ function refreshBoardIfActivePackIs(packId: string): void {
   }
 }
 
-ipcMain.handle('yt-info', async (_e, url: string) => {
-  try {
-    const ytdlp = findBin('yt-dlp');
-    const raw   = await spawnPromise(ytdlp, ['--dump-json', '--no-playlist', url], { capture: true });
-    const info  = JSON.parse(raw) as Record<string, unknown>;
-    return {
-      ok:        true,
-      title:     info.title     as string,
-      duration:  info.duration  as number,
-      thumbnail: info.thumbnail as string,
-      uploader:  (info.uploader ?? info.channel ?? 'Unknown') as string,
-      videoId:   info.id        as string,
-    };
-  } catch (e) {
-    return { ok: false, error: (e as Error).message };
-  }
-});
+// ── YouTube IPC ────────────────────────────────────────────────────────────
+//
+// All four yt-* handlers delegate to src/main/youtube.ts. The library-* paths
+// below (Task 6) still call youtube.cacheDir/cacheKey/prepareClip/preparePack
+// directly when they need to promote a previously-prepared clip.
 
-/**
- * Detect what kind of source the URL points to: a playlist (multiple videos),
- * a single video with chapters, or a single video without chapters.
- *
- * One yt-dlp call per URL. Caller (renderer) decides what to do with each
- * shape — for 'none' we route the user to the existing single-clip flow.
- */
-ipcMain.handle('yt-detect-snippets', async (_e, url: string) => {
-  try {
-    const ytdlp = findBin('yt-dlp');
-
-    // For URLs with list= we want playlist info; for plain video URLs we
-    // want chapters. yt-dlp behavior:
-    //   --no-playlist → ignores list=, returns single-video json
-    //   --flat-playlist → playlist wrapper with thin entries[]
-    const isPlaylist = /[?&]list=/.test(url);
-    const args = isPlaylist
-      ? ['--dump-single-json', '--flat-playlist', url]
-      : ['--dump-single-json', '--no-playlist',   url];
-
-    const raw = await spawnPromise(ytdlp, args, { capture: true });
-    const json = JSON.parse(raw) as Record<string, unknown>;
-    const result = classifyDetectResult(json);
-
-    return { ok: true, result };
-  } catch (e) {
-    const msg = (e as Error).message;
-    let friendly = msg;
-    if (/Private video/i.test(msg))             friendly = 'This video is private.';
-    else if (/age-?restrict|Sign in to confirm your age/i.test(msg))
-                                                friendly = 'Age-restricted video — yt-dlp cannot fetch it.';
-    else if (/HTTP Error 429/.test(msg))        friendly = 'YouTube rate-limited — try again in a minute.';
-    else if (/Video unavailable/i.test(msg))    friendly = 'Video unavailable.';
-
-    return { ok: false, error: friendly };
-  }
-});
-
-interface PrepareClipOpts {
-  url:    string;
-  start:  number;   // seconds
-  end:    number;   // seconds
-}
-
-/**
- * Download a YouTube source as a temp mp3. Returns the temp file path.
- * Caller is responsible for unlinking the temp file when done. Used by
- * yt-prepare-clip (single-cut) and yt-prepare-pack (multi-cut).
- */
-async function downloadSourceMp3(url: string): Promise<string> {
-  const tmpPath = path.join(app.getPath('temp'), `mb_yt_${Date.now()}.%(ext)s`);
-  const tmpMp3  = tmpPath.replace('%(ext)s', 'mp3');
-  const ytdlp   = findBin('yt-dlp');
-  await spawnPromise(ytdlp, [
-    '-x', '--audio-format', 'mp3', '--audio-quality', '0',
-    '--no-playlist', '-o', tmpPath, url,
-  ]);
-  return tmpMp3;
-}
-
-/**
- * Download + ffmpeg-cut a YouTube excerpt into the cache, returning a playable
- * file:// URL. Cached by (url, start, end) so a Preview click followed by
- * "+ Add to Library" doesn't re-download — the cached file just gets moved.
- */
-ipcMain.handle('yt-prepare-clip', async (_e, opts: PrepareClipOpts) => {
-  const { url, start, end } = opts;
-  if (end <= start) return { ok: false, error: 'End time must be after start time' };
-
-  const duration = Math.max(0.1, end - start);
-  const cacheKey = ytCacheKey(url, start, end);
-  const outFile  = path.join(ytCacheDir(), `${cacheKey}.mp3`);
-
-  if (fs.existsSync(outFile)) {
-    return { ok: true, cachePath: outFile, url: pathToFileURL(outFile).href, cached: true };
-  }
-
-  let tmpMp3: string | null = null;
-  try {
-    tmpMp3 = await downloadSourceMp3(url);
-    const ffmpeg = findBin('ffmpeg');
-
-    await spawnPromise(ffmpeg, [
-      '-y', '-ss', String(start), '-t', String(duration),
-      '-i', tmpMp3, '-acodec', 'libmp3lame', '-q:a', '2', outFile,
-    ]);
-    if (tmpMp3) { try { fs.unlinkSync(tmpMp3); } catch {} }
-
-    return { ok: true, cachePath: outFile, url: pathToFileURL(outFile).href, cached: false };
-  } catch (e) {
-    if (tmpMp3) { try { fs.unlinkSync(tmpMp3); } catch {} }
-    try { fs.unlinkSync(outFile); } catch {}
-    return { ok: false, error: (e as Error).message };
-  }
-});
-
-interface PreparePackSegment { title: string; start: number; end: number; }
-interface PreparePackOpts    { url: string; segments: PreparePackSegment[]; }
-
-/**
- * Bulk-prepare N snippets from one YouTube source. Downloads the source
- * mp3 once (or skips the download entirely if every requested segment is
- * already cached), then ffmpeg-cuts each segment into the same .cache/yt/
- * directory that yt-prepare-clip uses. Cache key matches: ytCacheKey(url,
- * start, end). Repeated invocations with overlapping segments are free.
- *
- * Partial failure tolerated: a failed cut is reported in `failed[]`; the
- * remaining cuts still complete. Caller decides whether to retry the
- * failures or proceed without them.
- *
- * Defensive caps: rejects > 100 segments or any segment outside [0.1, 60]s.
- */
-ipcMain.handle('yt-prepare-pack', async (_e, opts: PreparePackOpts) => {
-  const { url, segments } = opts;
-
-  if (segments.length > 100) {
-    return { ok: false, error: 'Too many segments (max 100).' };
-  }
-
-  // Per-segment duration is validated below in the cut loop and pushed to
-  // failed[] rather than rejecting the whole batch — playlist mode in the
-  // renderer cannot know exact video durations up-front.
-
-  const cacheDir = ytCacheDir();
-  const planned = segments.map(s => {
-    const key       = ytCacheKey(url, s.start, s.end);
-    const cachePath = path.join(cacheDir, `${key}.mp3`);
-    return { ...s, cachePath, cached: fs.existsSync(cachePath) };
-  });
-
-  const needsCut = planned.filter(p => !p.cached);
-  let tmpMp3: string | null = null;
-  const prepared: { title: string; cachePath: string; durationMs: number }[] = [];
-  const failed:   { title: string; error: string }[] = [];
-
-  try {
-    if (needsCut.length > 0) {
-      tmpMp3 = await downloadSourceMp3(url);
-    }
-
-    const ffmpeg = findBin('ffmpeg');
-    for (const p of planned) {
-      const dur = p.end - p.start;
-      if (dur < 0.1 || dur > 60) {
-        failed.push({ title: p.title, error: `Invalid duration (${dur.toFixed(2)}s) — must be 0.1–60s.` });
-        continue;
-      }
-      if (p.cached) {
-        prepared.push({
-          title: p.title, cachePath: p.cachePath,
-          durationMs: Math.round((p.end - p.start) * 1000),
-        });
-        continue;
-      }
-      try {
-        await spawnPromise(ffmpeg, [
-          '-y', '-ss', String(p.start), '-t', String(p.end - p.start),
-          '-i', tmpMp3!, '-acodec', 'libmp3lame', '-q:a', '2', p.cachePath,
-        ]);
-        prepared.push({
-          title: p.title, cachePath: p.cachePath,
-          durationMs: Math.round((p.end - p.start) * 1000),
-        });
-      } catch (e) {
-        try { fs.unlinkSync(p.cachePath); } catch {}
-        failed.push({ title: p.title, error: (e as Error).message });
-      }
-    }
-
-    if (tmpMp3) { try { fs.unlinkSync(tmpMp3); } catch {} }
-
-    return { ok: true, prepared, failed };
-  } catch (e) {
-    if (tmpMp3) { try { fs.unlinkSync(tmpMp3); } catch {} }
-    return { ok: false, error: (e as Error).message, prepared, failed };
-  }
-});
+ipcMain.handle('yt-info',             (_e, url: string)                  => youtube.getInfo(url));
+ipcMain.handle('yt-detect-snippets',  (_e, url: string)                  => youtube.detectSnippets(url));
+ipcMain.handle('yt-prepare-clip',     (_e, opts: youtube.PrepareClipOpts) => youtube.prepareClip(opts));
+ipcMain.handle('yt-prepare-pack',     (_e, opts: youtube.PreparePackOpts) => youtube.preparePack(opts));
 
 /**
  * Promote a previously-prepared clip into the library inventory. Idempotent
@@ -764,8 +497,8 @@ ipcMain.handle('library-create-pack-from-clips', async (_e, opts: CreatePackOpts
   if (clips.length === 0) {
     return { ok: false, error: 'No clips selected.' };
   }
-  if (clips.length > MAX_KEYS) {
-    return { ok: false, error: `Too many clips (max ${MAX_KEYS}).` };
+  if (clips.length > youtube.MAX_KEYS) {
+    return { ok: false, error: `Too many clips (max ${youtube.MAX_KEYS}).` };
   }
 
   ensureUserDirs();
@@ -777,7 +510,7 @@ ipcMain.handle('library-create-pack-from-clips', async (_e, opts: CreatePackOpts
 
   // Step 1 — copy each clip into custom/yt-<id>.mp3
   const copied: string[] = [];
-  const keyMap = mapSnippetsToKeys(clips);
+  const keyMap = youtube.mapSnippetsToKeys(clips);
   const packKeys: Record<string, { label: string; file: string; source: 'user' }> = {};
 
   try {
@@ -831,29 +564,9 @@ ipcMain.handle('library-create-pack-from-clips', async (_e, opts: CreatePackOpts
 // ── Voice recording / library inventory ────────────────────────────────────
 //
 // CRUD for the recordings inventory now lives in src/main/recording.ts. The
-// IPC handlers are wired below; library-add-from-clip (YouTube → library)
-// still lives here pending Task 5 but goes through recording.add().
-
-// ── YouTube clip cache ─────────────────────────────────────────────────────
-//
-// Preview-then-add flow: a Preview click downloads + cuts the excerpt into
-// userData/.cache/yt/<hash>.mp3, keyed by url+start+end so repeated previews
-// are instant and "+ Add to Library" doesn't re-download. Cached file gets
-// moved into the library on add, and old cache files are cleaned up lazily.
-
-function ytCacheDir(): string {
-  const d = path.join(userRoot(), '.cache', 'yt');
-  fs.mkdirSync(d, { recursive: true });
-  return d;
-}
-
-function ytCacheKey(url: string, start: number, end: number): string {
-  // crypto.createHash would be ideal but we don't need cryptographic strength.
-  let h = 0;
-  const str = `${url}|${start}|${end}`;
-  for (let i = 0; i < str.length; i++) h = ((h << 5) - h + str.charCodeAt(i)) | 0;
-  return Math.abs(h).toString(36);
-}
+// IPC handlers are wired below; library-add-from-clip + library-create-pack-
+// from-clips (above) still live here pending Task 6 but go through
+// recording.add() and youtube.* respectively.
 
 ipcMain.handle('recording-save', (_e, opts) => recording.save(opts));
 ipcMain.handle('recording-list', () => recording.list());
