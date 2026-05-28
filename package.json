@@ -1,6 +1,6 @@
 {
   "name": "meetingboost",
-  "version": "1.0.0-rc1",
+  "version": "1.0.0",
   "productName": "MeetingBoost",
   "description": "Keyboard-driven soundboard for macOS meetings",
   "author": {

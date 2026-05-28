@@ -1,9 +1,10 @@
 # MeetingBoost — Shipping Checklist
 
-Status snapshot for getting from current state (v1.0.0-rc1, code-complete) to a
-publicly shippable v1.0.0. Items are grouped by blocking severity. Items
-already done are checked off so the diff is clear; everything unchecked is
-real work.
+Status snapshot. **v1.0.0 has shipped** — Developer ID cert is configured,
+notarisation runs in CI, the DMG is downloadable without Gatekeeper warnings.
+Remaining items here are the post-v1 roadmap (full auto-update, crash reporter,
+landing-page polish, etc.). Items already done are checked off so the diff is
+clear; everything unchecked is real work.
 
 ---
 
@@ -38,16 +39,13 @@ real work.
 - [x] **`mbpack://` install links** — one-click pack sharing via custom URL scheme + confirmation dialog. `parseMbpackUrl` rejects non-https inner URLs.
 - [x] **Bundled BlackHole installer path** — `scripts/fetch-blackhole.sh` fetches the signed .pkg at build time; first-run walkthrough promotes the bundled installer when present.
 - [x] **CHANGELOG.md** introduced; semantic versioning declared.
+- [x] **Apple Developer ID certificate** installed. `electron-builder` picks it up automatically — downloaded DMGs no longer show *"MeetingBoost can't be opened because Apple cannot check it for malicious software"*.
+- [x] **Notarisation credentials in CI**: `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` configured as GitHub Action secrets. `mac.notarize: true` in `package.json#build` triggers the staple step; CI now publishes notarised, stapled DMGs.
+- [x] **Gatekeeper acceptance on a clean Mac** verified.
 
 ---
 
 ## 🔴 Blocking ship (must do)
-
-### Code-signing & notarization (only thing left blocking distribution)
-
-- [ ] **Apple Developer ID certificate** ($99/yr). Without one, downloaders see *"MeetingBoost can't be opened because Apple cannot check it for malicious software"*. Hardened-runtime config and entitlements are already in place — once the cert is installed, `electron-builder` picks it up automatically.
-- [ ] **Notarization credentials in CI**: set `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` as GitHub Action secrets (notarization is enabled via `mac.notarize` in `package.json#build`; without these env vars electron-builder skips notarization).
-- [ ] **Test on a clean Mac**: download the notarised DMG, confirm Gatekeeper accepts it without right-click → Open.
 
 ### Remaining feature stubs
 
