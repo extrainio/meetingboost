@@ -25,6 +25,7 @@ npm install
 npm run dev            # tsc && ELECTRON_IS_DEV=1 electron .
 npm run build          # tsc only
 npm run test           # python3 -m pytest tests/test_sounds.py
+npm run test:unit      # vitest run — per-module unit tests under tests/unit/
 npm run dist:dmg       # signed/notarised DMG (needs Apple cert)
 make sounds            # download the sound packs (~10 MB)
 ```
@@ -69,12 +70,13 @@ Renderer pages share OKLCH design tokens but do not share JS. They are isolated 
 
 ## Tests
 
-Two suites:
+Three suites:
 
 - **pytest** (`tests/test_sounds.py`, `tests/test_pack_format.py`, `tests/test_record_pipeline.py`, `tests/test_youtube_download.py`) — sound-pack integrity, `.mbpack` round-trip, ffmpeg pipeline, yt-dlp pipeline. Run with `make test`.
+- **Vitest** (`tests/unit/*.test.ts`) — per-module unit tests for pure TypeScript helpers under `src/main/`. Run with `npm run test:unit`. Vitest uses Vite internally for its runner; this is a dev-only concern and does **not** introduce a bundler into the production build (`npm run build` remains `tsc` in-place).
 - **Playwright** (`tests/e2e/*.spec.ts`) — launches the actual Electron binary. Slow; not in PR CI. Run with `npm run test:e2e`.
 
-When adding behavior to a renderer, prefer a pytest test against the underlying IPC handler over a Playwright E2E. E2E is the last resort.
+When adding behavior to a renderer, prefer a pytest test against the underlying IPC handler over a Playwright E2E. E2E is the last resort. When adding a pure function to a `src/main/` module, add a Vitest case.
 
 ## Pull requests
 
