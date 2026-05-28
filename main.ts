@@ -9,29 +9,14 @@ import { pathToFileURL } from 'url';
 import { GlobalKeyboardListener } from 'node-global-key-listener';
 
 import {
-  storeFile, userRoot, userPacksFile, userSoundsDir,
+  userRoot, userPacksFile, userSoundsDir,
   userRecordingsDir, userRecordingsFile, customSoundsDir,
   ensureUserDirs, bundledPacksFile, bundledSoundsRoot,
 } from './src/main/paths.js';
 import { findBin, spawnPromise } from './src/main/tools.js';
+import * as settings from './src/main/settings.js';
 
 const isDev = process.env.ELECTRON_IS_DEV === '1';
-
-type Store = Record<string, unknown>;
-
-function readStore(): Store {
-  try { return JSON.parse(fs.readFileSync(storeFile(), 'utf8')) as Store; }
-  catch { return {}; }
-}
-function writeStore(data: Store): void {
-  try { fs.writeFileSync(storeFile(), JSON.stringify(data, null, 2)); } catch {}
-}
-function getSetting<T>(key: string, fallback: T): T {
-  return (readStore()[key] as T) ?? fallback;
-}
-function setSetting(key: string, val: unknown): void {
-  const s = readStore(); s[key] = val; writeStore(s);
-}
 
 // ── Virtual driver detection ───────────────────────────────────────────────
 //
@@ -48,10 +33,21 @@ let childWin: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false;
 
+// Wire main-process deps the settings module needs to dispatch side effects.
+// Getters keep the link live so the module always sees the current boardWin /
+// childWin values (they're reassigned during window lifecycle).
+settings.configure({
+  getBoardWin: () => boardWin,
+  getChildWin: () => childWin,
+  clamp01:            (n) => clamp01(n),
+  startGlobalCapture: ()  => startGlobalCapture(),
+  stopGlobalCapture:  ()  => stopGlobalCapture(),
+});
+
 function createBoardWindow(): void {
-  const saved = (readStore().boardPosition ?? {}) as { x?: number; y?: number };
-  const startHidden  = getSetting('startHidden',  false);
-  const windowOpacity = clamp01(getSetting<number>('windowOpacity', 100) / 100);
+  const saved = (settings.readAll().boardPosition ?? {}) as { x?: number; y?: number };
+  const startHidden  = settings.get('startHidden',  false);
+  const windowOpacity = clamp01(settings.get<number>('windowOpacity', 100) / 100);
 
   boardWin = new BrowserWindow({
     width:     520,
@@ -61,7 +57,7 @@ function createBoardWindow(): void {
     resizable: false,
     x: saved.x,
     y: saved.y,
-    alwaysOnTop: getSetting('alwaysOnTop', true),
+    alwaysOnTop: settings.get('alwaysOnTop', true),
     frame:       false,
     hasShadow:   true,
     show:        !startHidden,
@@ -77,11 +73,11 @@ function createBoardWindow(): void {
 
   boardWin.on('moved', () => {
     const [x, y] = boardWin!.getPosition();
-    setSetting('boardPosition', { x, y });
+    settings.save('boardPosition', { x, y });
   });
 
   boardWin.on('close', (e) => {
-    if (!isQuitting && getSetting('hideOnClose', true)) {
+    if (!isQuitting && settings.get('hideOnClose', true)) {
       e.preventDefault();
       boardWin!.hide();
     }
@@ -111,7 +107,7 @@ function openChild(page: string): void {
     height: 640,
     x: cx,
     y: cy,
-    alwaysOnTop: getSetting('alwaysOnTop', true),
+    alwaysOnTop: settings.get('alwaysOnTop', true),
     frame:     false,
     hasShadow: true,
     webPreferences: {
@@ -169,18 +165,18 @@ ipcMain.on('open-board', () => {
 ipcMain.on('close-window', (e) => {
   BrowserWindow.fromWebContents(e.sender)?.close();
 });
-ipcMain.on('set-volume',   (_e, v: number)               => setSetting('volume', v));
+ipcMain.on('set-volume',   (_e, v: number)               => settings.save('volume', v));
 ipcMain.on('select-pack',  (_e, packId: string) => {
-  setSetting('activePack', packId);
+  settings.save('activePack', packId);
   boardWin?.webContents.send('pack-selected', packId);
 });
 ipcMain.on('save-setting', (_e, key: string, val: unknown) => {
-  setSetting(key, val);
-  applySettingSideEffect(key, val);
+  settings.save(key, val);
+  settings.applySideEffect(key, val);
 });
 
-ipcMain.handle('get-setting',      (_e, key: string, fb: unknown) => getSetting(key, fb));
-ipcMain.handle('get-all-settings', () => readStore());
+ipcMain.handle('get-setting',      (_e, key: string, fb: unknown) => settings.get(key, fb));
+ipcMain.handle('get-all-settings', () => settings.readAll());
 ipcMain.handle('app-version',      () => app.getVersion());
 
 // Detect virtual audio driver by enumerating output devices.
@@ -221,41 +217,15 @@ ipcMain.handle('open-external', async (_e, url: string): Promise<{ ok: boolean }
 
 // Write firstRun.blackholeWalkthroughSeen = true.
 // Uses the flat key naming convention of the existing settings store.
-// Errors are caught by writeStore() internally — fail open.
+// Errors are caught by settings.writeAll() internally — fail open.
 ipcMain.handle('audio-mark-walkthrough-seen', (): { ok: boolean } => {
-  setSetting('firstRun.blackholeWalkthroughSeen', true);
+  settings.save('firstRun.blackholeWalkthroughSeen', true);
   return { ok: true };
 });
 
-// Export the raw settings.json via Save dialog. Scope is intentionally just
-// preferences (not custom packs / recordings) — those move via .mbpack.
-ipcMain.handle('settings-export', async () => {
-  const win = BrowserWindow.getFocusedWindow() ?? childWin ?? boardWin ?? undefined;
-  const stamp = new Date().toISOString().slice(0, 10);
-  const res = await dialog.showSaveDialog(win!, {
-    title:       'Export MeetingBoost settings',
-    defaultPath: `meetingboost-settings-${stamp}.json`,
-    filters:     [{ name: 'JSON', extensions: ['json'] }],
-  });
-  if (res.canceled || !res.filePath) return { ok: false, canceled: true };
-  try {
-    fs.writeFileSync(res.filePath, JSON.stringify(readStore(), null, 2));
-    return { ok: true, file: res.filePath };
-  } catch (e) {
-    return { ok: false, error: (e as Error).message };
-  }
-});
+ipcMain.handle('settings-export', () => settings.exportToFile(childWin ?? boardWin));
 
-// Wipe settings.json. Live windows fall back to defaults on next read; we
-// re-broadcast a few effects (theme, opacity, alwaysOnTop) so the open
-// windows reflect the reset without a manual reload.
-ipcMain.handle('settings-reset', () => {
-  try { fs.unlinkSync(storeFile()); } catch {}
-  for (const k of ['theme', 'windowOpacity', 'alwaysOnTop']) {
-    applySettingSideEffect(k, getSetting(k, k === 'alwaysOnTop' ? true : k === 'windowOpacity' ? 100 : 'dark'));
-  }
-  return { ok: true };
-});
+ipcMain.handle('settings-reset', () => settings.reset());
 
 ipcMain.handle('check-accessibility', () =>
   process.platform === 'darwin' ? systemPreferences.isTrustedAccessibilityClient(false) : true);
@@ -267,37 +237,6 @@ ipcMain.handle('request-accessibility', () => {
   }
   return true;
 });
-
-// One place for all "this setting changes app behaviour at runtime" effects.
-function applySettingSideEffect(key: string, val: unknown): void {
-  switch (key) {
-    case 'alwaysOnTop':
-      boardWin?.setAlwaysOnTop(!!val);
-      childWin?.setAlwaysOnTop(!!val);
-      break;
-    case 'theme':
-      boardWin?.webContents.send('theme-changed', val);
-      childWin?.webContents.send('theme-changed', val);
-      break;
-    case 'windowOpacity': {
-      const op = clamp01(Number(val) / 100);
-      boardWin?.setOpacity(op);
-      break;
-    }
-    case 'launchAtLogin':
-      app.setLoginItemSettings({ openAtLogin: !!val, openAsHidden: getSetting('startHidden', false) });
-      break;
-    case 'startHidden':
-      app.setLoginItemSettings({ openAtLogin: getSetting('launchAtLogin', false), openAsHidden: !!val });
-      break;
-    case 'globalCapture':
-      val ? startGlobalCapture() : stopGlobalCapture();
-      break;
-    case 'outputDeviceId':
-      boardWin?.webContents.send('output-device-changed', val);
-      break;
-  }
-}
 
 // ── Global keyboard capture ──────────────────────────────────────────────────
 //
@@ -328,7 +267,7 @@ function startGlobalCapture(): void {
           mods['LEFT CTRL'] || mods['RIGHT CTRL'] ||
           mods['LEFT ALT']  || mods['RIGHT ALT']) return;
 
-      if (getSetting('suppressRepeat', true)) {
+      if (settings.get('suppressRepeat', true)) {
         const now = Date.now();
         if (lastFiredKey === name && now - lastFiredAt < KEY_REPEAT_MS) return;
         lastFiredKey = name;
@@ -589,7 +528,7 @@ function upsertUserCustomSound(key: string, label: string, relFile: string): voi
 }
 
 function refreshBoardIfActivePackIs(packId: string): void {
-  if (getSetting<string>('activePack', 'classics') === packId) {
+  if (settings.get<string>('activePack', 'classics') === packId) {
     boardWin?.webContents.send('pack-selected', packId);
   }
 }
@@ -1085,8 +1024,8 @@ ipcMain.handle('pack-delete', (_e, packId: string) => {
   userPacks.splice(idx, 1);
   writeUserPacks(userPacks);
 
-  if (getSetting<string>('activePack', 'classics') === packId) {
-    setSetting('activePack', 'classics');
+  if (settings.get<string>('activePack', 'classics') === packId) {
+    settings.save('activePack', 'classics');
     boardWin?.webContents.send('pack-selected', 'classics');
   }
   boardWin?.webContents.send('packs-changed');
@@ -1120,7 +1059,7 @@ ipcMain.handle('recording-delete', (_e, id: string) => {
 
   boardWin?.webContents.send('recordings-changed');
   childWin?.webContents.send('recordings-changed');
-  if (changed) refreshBoardIfActivePackIs(getSetting('activePack', 'classics'));
+  if (changed) refreshBoardIfActivePackIs(settings.get('activePack', 'classics'));
   return { ok: true };
 });
 
@@ -1444,7 +1383,7 @@ app.whenReady().then(() => {
   // After the board finishes loading, check for a virtual audio driver.
   // If absent and the walkthrough hasn't been seen, push an event to the renderer.
   boardWin!.webContents.once('did-finish-load', async () => {
-    const seen = getSetting<boolean>('firstRun.blackholeWalkthroughSeen', false);
+    const seen = settings.get<boolean>('firstRun.blackholeWalkthroughSeen', false);
     if (seen) return;
     try {
       const { found } = await (boardWin!.webContents.executeJavaScript(`
@@ -1468,7 +1407,7 @@ app.whenReady().then(() => {
   });
 
   // Restore persisted runtime state
-  if (getSetting('globalCapture', false)) startGlobalCapture();
+  if (settings.get('globalCapture', false)) startGlobalCapture();
 
   app.on('activate', () => { boardWin!.show(); boardWin!.focus(); });
 });
