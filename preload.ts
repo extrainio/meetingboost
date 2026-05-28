@@ -11,6 +11,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSetting:    (key: string, fb: unknown): Promise<unknown>  => ipcRenderer.invoke('get-setting', key, fb),
   getAllSettings:  (): Promise<Record<string, unknown>>          => ipcRenderer.invoke('get-all-settings'),
   appVersion:    (): Promise<string>               => ipcRenderer.invoke('app-version'),
+  checkForUpdate: (): Promise<
+    | { status: 'up-to-date'; current: string; latest: string }
+    | { status: 'available';  current: string; latest: string; url: string }
+    | { status: 'error';      current: string; reason: string }
+  > => ipcRenderer.invoke('check-for-update'),
   settingsExport: (): Promise<{ ok: boolean; file?: string; canceled?: boolean; error?: string }> =>
     ipcRenderer.invoke('settings-export'),
   settingsReset:  (): Promise<{ ok: boolean }> =>

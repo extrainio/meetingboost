@@ -109,6 +109,33 @@ export function openChild(page: string): void {
   if (isDev) childWin.webContents.openDevTools({ mode: 'detach' });
 }
 
+// Optional builder for an extra menu section (e.g., the update item). Injected
+// from main.ts via setTrayExtras; returns the items to splice in just above
+// the Quit entry. Keeps windows.ts oblivious to update state.
+type TrayExtrasBuilder = () => Electron.MenuItemConstructorOptions[];
+let trayExtras: TrayExtrasBuilder | null = null;
+
+export function setTrayExtras(builder: TrayExtrasBuilder | null): void {
+  trayExtras = builder;
+  if (tray) rebuildTrayMenu();
+}
+
+export function rebuildTrayMenu(): void {
+  if (!tray) return;
+  const base: Electron.MenuItemConstructorOptions[] = [
+    { label: 'Show Board', click: () => { boardWin!.show(); boardWin!.focus(); } },
+    { label: 'Add Sound…', click: () => openChild('sound-manager') },
+    { label: 'Packs…',     click: () => openChild('packs') },
+    { label: 'Settings…',  click: () => openChild('settings') },
+    { type: 'separator' },
+  ];
+  const extras = trayExtras ? trayExtras() : [];
+  const quit: Electron.MenuItemConstructorOptions[] = [
+    { label: 'Quit MeetingBoost', click: () => { isQuitting = true; app.quit(); } },
+  ];
+  tray.setContextMenu(Menu.buildFromTemplate([...base, ...extras, ...quit]));
+}
+
 export function createTray(): void {
   // Template image: macOS auto-tints it based on menu-bar light/dark state.
   // `__dirname` resolves through the asar in packaged builds.
@@ -124,16 +151,7 @@ export function createTray(): void {
 
   tray = new Tray(trayImg);
   tray.setToolTip(`MeetingBoost ${app.getVersion()}`);
-
-  const menu = Menu.buildFromTemplate([
-    { label: 'Show Board', click: () => { boardWin!.show(); boardWin!.focus(); } },
-    { label: 'Add Sound…', click: () => openChild('sound-manager') },
-    { label: 'Packs…',     click: () => openChild('packs') },
-    { label: 'Settings…',  click: () => openChild('settings') },
-    { type: 'separator' },
-    { label: 'Quit MeetingBoost', click: () => { isQuitting = true; app.quit(); } },
-  ]);
-  tray.setContextMenu(menu);
+  rebuildTrayMenu();
 
   tray.on('click', () => {
     boardWin!.isVisible() ? boardWin!.hide() : (boardWin!.show(), boardWin!.focus());
