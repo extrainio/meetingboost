@@ -1,7 +1,7 @@
 import {
   app, BrowserWindow, ipcMain, globalShortcut,
   Tray, nativeImage, Menu, screen, session, dialog,
-  systemPreferences, shell,
+  shell,
 } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -15,18 +15,9 @@ import {
 } from './src/main/paths.js';
 import { findBin, spawnPromise } from './src/main/tools.js';
 import * as settings from './src/main/settings.js';
+import * as audio from './src/main/audio.js';
 
 const isDev = process.env.ELECTRON_IS_DEV === '1';
-
-// ── Virtual driver detection ───────────────────────────────────────────────
-//
-// Mirrored in tests/test_blackhole_detection.py.
-
-const VIRTUAL_DRIVER_RE = /BlackHole|VB-Cable|Soundflower|Loopback Audio/i;
-
-export function isVirtualAudioDevice(name: string): boolean {
-  return VIRTUAL_DRIVER_RE.test(name);
-}
 
 let boardWin: BrowserWindow | null = null;
 let childWin: BrowserWindow | null = null;
@@ -179,32 +170,7 @@ ipcMain.handle('get-setting',      (_e, key: string, fb: unknown) => settings.ge
 ipcMain.handle('get-all-settings', () => settings.readAll());
 ipcMain.handle('app-version',      () => app.getVersion());
 
-// Detect virtual audio driver by enumerating output devices.
-// Uses the board window's renderer context (navigator.mediaDevices) because
-// main-process code has no access to Web Audio APIs.
-// Returns { found: boolean, deviceName?: string }.
-ipcMain.handle('audio-detect-virtual-driver', async (): Promise<{ found: boolean; deviceName?: string }> => {
-  if (!boardWin || boardWin.isDestroyed()) return { found: false };
-  try {
-    // Enumerate-only: no getUserMedia so we don't trigger the TCC prompt.
-    // If labels are empty (no prior mic permission), detection returns false
-    // and the walkthrough shows — the Refresh button inside it requests permission.
-    const result = await boardWin.webContents.executeJavaScript(`
-      (async () => {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const outputs = devices.filter(d => d.kind === 'audiooutput');
-        return outputs.map(d => d.label || '');
-      })()
-    `);
-    const labels: string[] = Array.isArray(result) ? result : [];
-    for (const label of labels) {
-      if (isVirtualAudioDevice(label)) return { found: true, deviceName: label };
-    }
-    return { found: false };
-  } catch {
-    return { found: false };
-  }
-});
+ipcMain.handle('audio-detect-virtual-driver', () => audio.detectVirtualDriver(boardWin));
 
 // Open a URL in the system's default browser via shell.openExternal.
 // Restricted to http(s) so the bridge can't be used to launch file://, javascript:,
@@ -215,28 +181,15 @@ ipcMain.handle('open-external', async (_e, url: string): Promise<{ ok: boolean }
   return { ok: true };
 });
 
-// Write firstRun.blackholeWalkthroughSeen = true.
-// Uses the flat key naming convention of the existing settings store.
-// Errors are caught by settings.writeAll() internally — fail open.
-ipcMain.handle('audio-mark-walkthrough-seen', (): { ok: boolean } => {
-  settings.save('firstRun.blackholeWalkthroughSeen', true);
-  return { ok: true };
-});
+ipcMain.handle('audio-mark-walkthrough-seen', () => audio.markWalkthroughSeen());
 
 ipcMain.handle('settings-export', () => settings.exportToFile(childWin ?? boardWin));
 
 ipcMain.handle('settings-reset', () => settings.reset());
 
-ipcMain.handle('check-accessibility', () =>
-  process.platform === 'darwin' ? systemPreferences.isTrustedAccessibilityClient(false) : true);
+ipcMain.handle('check-accessibility', () => audio.checkAccessibility());
 
-ipcMain.handle('request-accessibility', () => {
-  if (process.platform === 'darwin') {
-    // Triggers the macOS prompt — user must grant in System Settings, then restart MB
-    systemPreferences.isTrustedAccessibilityClient(true);
-  }
-  return true;
-});
+ipcMain.handle('request-accessibility', () => audio.requestAccessibility());
 
 // ── Global keyboard capture ──────────────────────────────────────────────────
 //
@@ -1394,7 +1347,7 @@ app.whenReady().then(() => {
             .map(d => d.label || '');
         })()
       `) as Promise<string[]>).then(labels => ({
-        found: labels.some(l => isVirtualAudioDevice(l)),
+        found: labels.some(l => audio.isVirtualAudioDevice(l)),
       }));
       if (!found) {
         boardWin!.webContents.send('show-blackhole-walkthrough');
