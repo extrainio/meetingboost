@@ -28,12 +28,12 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/extrain-pascal/meetingboost/releases/latest"><strong>↓ Download for macOS</strong></a> ·
+  <a href="https://extrainio.github.io/meetingboost/">Website</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#showcase">Showcase</a> ·
   <a href="#features">Features</a> ·
   <a href="#mbpack-format">.mbpack format</a> ·
-  <a href="#development">Development</a> ·
-  <a href="SETUP.md">Setup &amp; troubleshooting</a> ·
   <a href="CONTRIBUTING.md">Contributing</a> ·
   <a href="SHIPPING.md">Roadmap</a>
 </p>
@@ -70,8 +70,6 @@
     </td>
   </tr>
 </table>
-
-> Regenerate these from your local build: `make screenshots`.
 
 ---
 
