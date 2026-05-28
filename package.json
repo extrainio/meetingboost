@@ -12,9 +12,10 @@
     "build": "tsc",
     "start": "tsc && electron .",
     "dev": "tsc && ELECTRON_IS_DEV=1 electron .",
-    "dist": "tsc && electron-builder --mac",
-    "dist:dmg": "tsc && electron-builder --mac dmg",
-    "dist:dir": "tsc && electron-builder --mac dir",
+    "fetch:blackhole": "bash scripts/fetch-blackhole.sh",
+    "dist": "tsc && bash scripts/fetch-blackhole.sh && electron-builder --mac",
+    "dist:dmg": "tsc && bash scripts/fetch-blackhole.sh && electron-builder --mac dmg",
+    "dist:dir": "tsc && bash scripts/fetch-blackhole.sh && electron-builder --mac dir",
     "verify:mac-bundle": "bash scripts/verify-macos-bundle.sh",
     "test": "python3 -m pytest tests/test_sounds.py -v",
     "test:unit": "vitest run",
@@ -31,6 +32,15 @@
       "node_modules/ffmpeg-static/ffmpeg",
       "node_modules/ffmpeg-static/index.js",
       "node_modules/ffmpeg-static/package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/installers",
+        "to": "installers",
+        "filter": [
+          "*.pkg"
+        ]
+      }
     ],
     "mac": {
       "category": "public.app-category.utilities",
