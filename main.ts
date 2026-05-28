@@ -223,7 +223,7 @@ ipcMain.handle('audio-mark-walkthrough-seen', (): { ok: boolean } => {
   return { ok: true };
 });
 
-ipcMain.handle('settings-export', () => settings.exportToFile(boardWin));
+ipcMain.handle('settings-export', () => settings.exportToFile(childWin ?? boardWin));
 
 ipcMain.handle('settings-reset', () => settings.reset());
 
