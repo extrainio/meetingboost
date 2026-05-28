@@ -9,6 +9,7 @@ import {
 } from './paths.js';
 import { findBin, spawnPromise } from './tools.js';
 import * as settings from './settings.js';
+import * as packs from './packs.js';
 
 // ── Voice recording inventory ──────────────────────────────────────────────
 //
@@ -32,44 +33,21 @@ interface RecordSaveOpts {
   durationMs?: number;
 }
 
-// Pack-level types — kept structural so we don't pull main.ts's full type set
-// into this module. Mirrors `SoundEntry` / `PackEntry` from main.ts.
-type EntrySource = 'bundled' | 'user' | 'recording';
-interface SoundEntry {
-  label:   string;
-  file:    string;
-  source?: EntrySource;
-}
-interface PackEntry {
-  id:          string;
-  name:        string;
-  description: string;
-  keys:        Record<string, SoundEntry>;
-  origin?: 'bundled' | 'user';
-}
-
 // ── DI ─────────────────────────────────────────────────────────────────────
 //
 // Window getters mirror Task 2's settings.ts pattern: main.ts re-assigns its
 // boardWin/childWin lets during the lifecycle, so we read via getters to
-// always see the current value. readUserPacks / writeUserPacks /
-// refreshBoardIfActivePackIs are still owned by main.ts (slated for Task 6
-// packs.ts) — inject them rather than circular-import.
+// always see the current value. Pack helpers now live in packs.ts (Task 6),
+// so we import them directly rather than going through DI.
 
 interface RecordingDeps {
   getBoardWin: () => BrowserWindowType | null;
   getChildWin: () => BrowserWindowType | null;
-  readUserPacks: () => PackEntry[];
-  writeUserPacks: (packs: PackEntry[]) => void;
-  refreshBoardIfActivePackIs: (packId: string) => void;
 }
 
 const deps: RecordingDeps = {
   getBoardWin: () => null,
   getChildWin: () => null,
-  readUserPacks: () => [],
-  writeUserPacks: () => {},
-  refreshBoardIfActivePackIs: () => {},
 };
 
 export function configure(d: Partial<RecordingDeps>): void {
@@ -170,10 +148,10 @@ export function remove(id: string): { ok: boolean; error?: string } {
   if (idx < 0) return { ok: false, error: 'Recording not found' };
 
   // Detach from any user packs first so the board doesn't hold a dead path.
-  const packs   = deps.readUserPacks();
-  const target  = items[idx].file;
-  let changed   = false;
-  for (const p of packs) {
+  const userPacks = packs.readUser();
+  const target    = items[idx].file;
+  let changed     = false;
+  for (const p of userPacks) {
     for (const k of Object.keys(p.keys)) {
       const e = p.keys[k];
       if (e.source === 'recording' && e.file === target) {
@@ -182,7 +160,7 @@ export function remove(id: string): { ok: boolean; error?: string } {
       }
     }
   }
-  if (changed) deps.writeUserPacks(packs);
+  if (changed) packs.writeUser(userPacks);
 
   try { fs.unlinkSync(path.join(userRecordingsDir(), target)); } catch {}
   items.splice(idx, 1);
@@ -190,7 +168,7 @@ export function remove(id: string): { ok: boolean; error?: string } {
 
   deps.getBoardWin()?.webContents.send('recordings-changed');
   deps.getChildWin()?.webContents.send('recordings-changed');
-  if (changed) deps.refreshBoardIfActivePackIs(settings.get('activePack', 'classics'));
+  if (changed) packs.refreshBoardIfActivePackIs(settings.get('activePack', 'classics'));
   return { ok: true };
 }
 

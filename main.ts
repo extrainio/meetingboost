@@ -1,23 +1,18 @@
 import {
   app, BrowserWindow, ipcMain, globalShortcut,
-  Tray, nativeImage, Menu, screen, session, dialog,
+  Tray, nativeImage, Menu, screen, session,
   shell,
 } from 'electron';
 import * as path from 'path';
-import * as fs from 'fs';
-import { pathToFileURL } from 'url';
 import { GlobalKeyboardListener } from 'node-global-key-listener';
 
-import {
-  userPacksFile, userSoundsDir,
-  userRecordingsDir, customSoundsDir,
-  ensureUserDirs, bundledPacksFile, bundledSoundsRoot,
-} from './src/main/paths.js';
-import { spawnPromise } from './src/main/tools.js';
+import { ensureUserDirs } from './src/main/paths.js';
 import * as settings from './src/main/settings.js';
 import * as audio from './src/main/audio.js';
 import * as recording from './src/main/recording.js';
 import * as youtube from './src/main/youtube.js';
+import * as packs from './src/main/packs.js';
+import * as library from './src/main/library.js';
 
 const isDev = process.env.ELECTRON_IS_DEV === '1';
 
@@ -37,15 +32,24 @@ settings.configure({
   stopGlobalCapture:  ()  => stopGlobalCapture(),
 });
 
-// Recording module needs window refs (for `recordings-changed` events) and the
-// pack helpers (still in main.ts; moved out in Task 6). Same getter pattern so
-// the module always sees the current boardWin/childWin values.
+// Recording module needs window refs (for `recordings-changed` events). It
+// reaches into packs.* directly for the pack-detach side effect on delete —
+// no DI needed for pack helpers since Task 6.
 recording.configure({
   getBoardWin: () => boardWin,
   getChildWin: () => childWin,
-  readUserPacks,
-  writeUserPacks,
-  refreshBoardIfActivePackIs,
+});
+
+// Packs + library modules emit their own `pack-selected` / `packs-changed` /
+// `recordings-changed` events so they need window refs via the same getter
+// pattern.
+packs.configure({
+  getBoardWin: () => boardWin,
+  getChildWin: () => childWin,
+});
+library.configure({
+  getBoardWin: () => boardWin,
+  getChildWin: () => childWin,
 });
 
 function createBoardWindow(): void {
@@ -255,598 +259,37 @@ function stopGlobalCapture(): void {
   kbListener = null;
 }
 
-// ── Pack storage ─────────────────────────────────────────────────────────────
+// ── Pack storage + YouTube + library inventory IPC ─────────────────────────
 //
-// Built-in packs ship inside the bundle (read-only inside app.asar). User-
-// authored packs and the user's "custom" pack live in userData, which is
-// always writable. readPacks() merges them — user wins on id collision.
+// Pack CRUD / read / bind / import / export — src/main/packs.ts
+// Recording inventory CRUD                  — src/main/recording.ts
+// YouTube snippet pipeline                  — src/main/youtube.ts
+// library-* (promote prepared clips/packs)  — src/main/library.ts
 //
-// Source tracking is **per entry**, not per pack. When a user binds a new
-// recording into an originally-bundled pack, we clone the pack into user
-// storage but every untouched entry keeps `source: 'bundled'` so its audio
-// file still resolves from the bundle. Only newly-bound entries point at
-// userData.
+// main.ts only wires the IPC channels. The handlers are intentionally one
+// line each — every side effect (event fan-out, fs writes) lives in the
+// owning module.
 
-type EntrySource = 'bundled' | 'user' | 'recording';
-
-interface SoundEntry {
-  label:   string;
-  file:    string;     // path relative to that entry's source root
-  source?: EntrySource;
-}
-
-interface PackEntry {
-  id:          string;
-  name:        string;
-  description: string;
-  keys:        Record<string, SoundEntry>;
-  /** Where this pack's *metadata* lives. Set by the loader, not stored. */
-  origin?: 'bundled' | 'user';
-}
-
-function slugify(name: string, fallback = 'sound'): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || fallback;
-}
-
-// ── YouTube Pack helpers ───────────────────────────────────────────────────
-//
-// Snippet → keyboard-pack transforms (filterSnippets / mapSnippetsToKeys /
-// classifyDetectResult) and the yt-dlp/ffmpeg orchestration now live in
-// src/main/youtube.ts. slugifyPackName stays here because the library-*
-// handlers (Task 6) still call it directly.
-
-export function slugifyPackName(
-  name: string,
-  existingNames: string[]
-): { finalName: string; packId: string } {
-  const base = (name || '').trim() || 'YouTube Pack';
-
-  let finalName = base;
-  let n = 2;
-  while (existingNames.includes(finalName)) {
-    finalName = `${base} (${n})`;
-    n += 1;
-  }
-
-  let slug = finalName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  if (!slug) {
-    slug = `yt-pack-${Date.now()}`;
-  }
-
-  return { finalName, packId: slug };
-}
-
-function tagBundledEntries(p: PackEntry): PackEntry {
-  // Every entry in a bundled pack file is, by definition, a bundled asset.
-  const keys: Record<string, SoundEntry> = {};
-  for (const [k, e] of Object.entries(p.keys)) {
-    keys[k] = { ...e, source: 'bundled' };
-  }
-  return { ...p, keys, origin: 'bundled' };
-}
-
-function readBundledPacks(): PackEntry[] {
-  try {
-    const raw = JSON.parse(fs.readFileSync(bundledPacksFile(), 'utf8')) as PackEntry[];
-    // The bundled file historically contained a "custom" pack with dev-only
-    // entries. Strip it on read — custom is always user-owned now.
-    return raw.filter(p => p.id !== 'custom').map(tagBundledEntries);
-  } catch {
-    return [];
-  }
-}
-
-/**
- * Infer a missing `source` for a user-pack entry that pre-dates per-entry
- * source tracking. Older builds saved bundled-clone entries as plain paths
- * like `classics/applause.mp3` (which only exist in the bundle) and recording
- * pointers as `recordings/<file>` paths. We detect those at read time so old
- * data keeps resolving correctly without forcing the user to wipe userData.
- */
-function inferEntrySource(entry: SoundEntry): SoundEntry {
-  if (entry.source) return entry;
-  if (entry.file.startsWith('recordings/')) {
-    return { ...entry, source: 'recording', file: entry.file.slice('recordings/'.length) };
-  }
-  // Path that exists in the bundle? It came from a bundled clone.
-  if (fs.existsSync(path.join(bundledSoundsRoot(), entry.file))) {
-    return { ...entry, source: 'bundled' };
-  }
-  return { ...entry, source: 'user' };
-}
-
-function readUserPacks(): PackEntry[] {
-  try {
-    const raw = JSON.parse(fs.readFileSync(userPacksFile(), 'utf8')) as PackEntry[];
-    return raw.map(p => {
-      const keys: Record<string, SoundEntry> = {};
-      for (const [k, e] of Object.entries(p.keys)) keys[k] = inferEntrySource(e);
-      return { ...p, keys, origin: 'user' };
-    });
-  } catch {
-    return [];
-  }
-}
-
-function writeUserPacks(packs: PackEntry[]): void {
-  ensureUserDirs();
-  // Strip the transient `origin` tag before persisting; entry-level `source`
-  // is intentionally kept on disk so we don't have to re-infer next read.
-  const clean = packs.map(({ origin: _ignored, ...rest }) => rest);
-  fs.writeFileSync(userPacksFile(), JSON.stringify(clean, null, 2));
-}
-
-/** Merged view: bundled first, then user — user packs override bundled on id. */
-function readPacks(): PackEntry[] {
-  const bundled = readBundledPacks();
-  const user    = readUserPacks();
-  const byId    = new Map<string, PackEntry>();
-  for (const p of bundled) byId.set(p.id, p);
-  for (const p of user)    byId.set(p.id, p);
-  return [...byId.values()];
-}
-
-/** Resolve an entry to its absolute path on disk based on per-entry source. */
-function resolveEntryPath(entry: SoundEntry): string {
-  switch (entry.source) {
-    case 'recording': return path.join(userRecordingsDir(), entry.file);
-    case 'user':      return path.join(userSoundsDir(),     entry.file);
-    case 'bundled':
-    default:          return path.join(bundledSoundsRoot(), entry.file);
-  }
-}
-
-function upsertUserCustomSound(key: string, label: string, relFile: string): void {
-  const userPacks = readUserPacks();
-  let custom = userPacks.find(p => p.id === 'custom');
-  if (!custom) {
-    custom = {
-      id: 'custom', name: 'My Sounds', description: 'Custom sounds',
-      keys: {}, origin: 'user',
-    };
-    userPacks.push(custom);
-  }
-  custom.keys[key] = { label, file: relFile, source: 'user' };
-  writeUserPacks(userPacks);
-}
-
-function refreshBoardIfActivePackIs(packId: string): void {
-  if (settings.get<string>('activePack', 'classics') === packId) {
-    boardWin?.webContents.send('pack-selected', packId);
-  }
-}
-
-// ── YouTube IPC ────────────────────────────────────────────────────────────
-//
-// All four yt-* handlers delegate to src/main/youtube.ts. The library-* paths
-// below (Task 6) still call youtube.cacheDir/cacheKey/prepareClip/preparePack
-// directly when they need to promote a previously-prepared clip.
-
-ipcMain.handle('yt-info',             (_e, url: string)                  => youtube.getInfo(url));
-ipcMain.handle('yt-detect-snippets',  (_e, url: string)                  => youtube.detectSnippets(url));
+ipcMain.handle('yt-info',             (_e, url: string)                   => youtube.getInfo(url));
+ipcMain.handle('yt-detect-snippets',  (_e, url: string)                   => youtube.detectSnippets(url));
 ipcMain.handle('yt-prepare-clip',     (_e, opts: youtube.PrepareClipOpts) => youtube.prepareClip(opts));
 ipcMain.handle('yt-prepare-pack',     (_e, opts: youtube.PreparePackOpts) => youtube.preparePack(opts));
 
-/**
- * Promote a previously-prepared clip into the library inventory. Idempotent
- * for repeated clicks: copies the cache file into the library dir under a
- * stable name and registers the metadata. Caller should pass `cachePath`
- * from yt-prepare-clip.
- */
-ipcMain.handle('library-add-from-clip', async (_e, opts: {
-  cachePath: string; name: string; sourceUrl?: string; durationMs?: number;
-}) => {
-  const { cachePath, name, sourceUrl, durationMs } = opts;
-  if (!fs.existsSync(cachePath)) {
-    return { ok: false, error: 'Clip cache is gone — click Preview again to redownload.' };
-  }
+ipcMain.handle('library-add-from-clip',          (_e, opts) => library.addFromClip(opts));
+ipcMain.handle('library-create-pack-from-clips', (_e, opts) => library.createPackFromClips(opts));
 
-  ensureUserDirs();
-  const id       = `yt_${Date.now()}`;
-  const safeName = slugify(name, 'clip');
-  const baseName = `${safeName}-${id}.mp3`;
-  const outFile  = path.join(userRecordingsDir(), baseName);
-  try {
-    fs.copyFileSync(cachePath, outFile);
-  } catch (e) {
-    return { ok: false, error: (e as Error).message };
-  }
+ipcMain.handle('recording-save',   (_e, opts)               => recording.save(opts));
+ipcMain.handle('recording-list',   ()                       => recording.list());
+ipcMain.handle('recording-delete', (_e, id: string)         => recording.remove(id));
+ipcMain.handle('recording-rename', (_e, id: string, n: string) => recording.rename(id, n));
 
-  const meta: recording.RecordingMeta = {
-    id, name: name.trim() || 'Clip',
-    file: baseName,
-    createdAt: new Date().toISOString(),
-    durationMs,
-    kind: 'youtube',
-    sourceUrl,
-  };
-  recording.add(meta);
-
-  boardWin?.webContents.send('recordings-changed');
-  childWin?.webContents.send('recordings-changed');
-
-  return { ok: true, item: { ...meta, url: pathToFileURL(outFile).href } };
-});
-
-interface CreatePackClip {
-  cachePath:  string;
-  title:      string;
-  durationMs: number;
-}
-interface CreatePackOpts {
-  url:        string;
-  packName:   string;
-  clips:      CreatePackClip[];
-}
-
-/**
- * Atomically (with rollback) create a new user pack from prepared clip
- * cache files. Steps:
- *   1. for each clip: copy cachePath → userSoundsDir()/custom/yt-<id>.mp3
- *   2. write user packs.json with the new pack entry
- *   3. emit packs-changed
- * On any step-1 failure, deletes already-copied files and returns error.
- * On step-2 failure, deletes ALL step-1 files. packs.json is written last
- * so a crash between 1 and 2 leaks orphaned mp3s rather than leaving a
- * pack referencing missing files.
- *
- * Defensive cap: rejects > 15 clips (keyboard layout cap).
- */
-ipcMain.handle('library-create-pack-from-clips', async (_e, opts: CreatePackOpts) => {
-  const { url, packName, clips } = opts;
-  if (clips.length === 0) {
-    return { ok: false, error: 'No clips selected.' };
-  }
-  if (clips.length > youtube.MAX_KEYS) {
-    return { ok: false, error: `Too many clips (max ${youtube.MAX_KEYS}).` };
-  }
-
-  ensureUserDirs();
-  const customDir = customSoundsDir();
-
-  const userPacks  = readUserPacks();
-  const existing   = userPacks.map(p => p.name);
-  const { finalName, packId } = slugifyPackName(packName, existing);
-
-  // Step 1 — copy each clip into custom/yt-<id>.mp3
-  const copied: string[] = [];
-  const keyMap = youtube.mapSnippetsToKeys(clips);
-  const packKeys: Record<string, { label: string; file: string; source: 'user' }> = {};
-
-  try {
-    for (const km of keyMap.mapped) {
-      const clip   = km.snippet as CreatePackClip;
-      const id     = `yt_${Date.now()}_${km.key}`;
-      const file   = `yt-${id}.mp3`;
-      const dest   = path.join(customDir, file);
-      fs.copyFileSync(clip.cachePath, dest);
-      copied.push(dest);
-      packKeys[km.key] = {
-        label:  clip.title,
-        file:   `custom/${file}`,
-        source: 'user',
-      };
-    }
-  } catch (e) {
-    for (const p of copied) { try { fs.unlinkSync(p); } catch {} }
-    return { ok: false, error: (e as Error).message };
-  }
-
-  // Step 2 — append to user packs.json
-  try {
-    const newPack = {
-      id: packId,
-      name: finalName,
-      description: `Imported from YouTube`,
-      keys: packKeys,
-      origin: 'user' as const,
-      sourceUrl: url,
-    };
-    userPacks.push(newPack);
-    writeUserPacks(userPacks);
-  } catch (e) {
-    for (const p of copied) { try { fs.unlinkSync(p); } catch {} }
-    return { ok: false, error: (e as Error).message };
-  }
-
-  // Step 3 — notify
-  boardWin?.webContents.send('packs-changed');
-  childWin?.webContents.send('packs-changed');
-
-  return {
-    ok: true,
-    packId,
-    finalName,
-    keysAssigned: keyMap.mapped.length,
-  };
-});
-
-// ── Voice recording / library inventory ────────────────────────────────────
-//
-// CRUD for the recordings inventory now lives in src/main/recording.ts. The
-// IPC handlers are wired below; library-add-from-clip + library-create-pack-
-// from-clips (above) still live here pending Task 6 but go through
-// recording.add() and youtube.* respectively.
-
-ipcMain.handle('recording-save', (_e, opts) => recording.save(opts));
-ipcMain.handle('recording-list', () => recording.list());
-
-/**
- * Create a brand-new empty user pack. Generates a unique id from the name if
- * none was supplied. Used by the "+ New Pack" UI in packs.html.
- */
-ipcMain.handle('pack-create', (_e, opts: { name: string; description?: string; id?: string }) => {
-  const name = (opts?.name || '').trim();
-  if (!name) return { ok: false, error: 'Name is required' };
-
-  const merged    = readPacks();
-  const baseId    = opts.id?.trim() || slugify(name, 'pack');
-  let finalId     = baseId;
-  let n           = 1;
-  while (merged.some(p => p.id === finalId)) { n++; finalId = `${baseId}-${n}`; }
-
-  const userPacks = readUserPacks();
-  userPacks.push({
-    id:          finalId,
-    name,
-    description: (opts.description || '').trim() || 'My pack',
-    keys:        {},
-    origin:      'user',
-  });
-  writeUserPacks(userPacks);
-
-  boardWin?.webContents.send('packs-changed');
-  childWin?.webContents.send('packs-changed');
-
-  return { ok: true, id: finalId, name };
-});
-
-/**
- * Delete a user-owned pack. Bundled packs cannot be deleted (they're shipped
- * with the app). If the active pack is the one being deleted, the board
- * falls back to 'classics'.
- */
-ipcMain.handle('pack-delete', (_e, packId: string) => {
-  if (!packId) return { ok: false, error: 'Missing pack id' };
-  const userPacks = readUserPacks();
-  const idx       = userPacks.findIndex(p => p.id === packId);
-  if (idx < 0) return { ok: false, error: 'Pack not found in user storage (built-in packs cannot be deleted)' };
-
-  userPacks.splice(idx, 1);
-  writeUserPacks(userPacks);
-
-  if (settings.get<string>('activePack', 'classics') === packId) {
-    settings.save('activePack', 'classics');
-    boardWin?.webContents.send('pack-selected', 'classics');
-  }
-  boardWin?.webContents.send('packs-changed');
-  childWin?.webContents.send('packs-changed');
-  return { ok: true };
-});
-
-ipcMain.handle('recording-delete', (_e, id: string) => recording.remove(id));
-ipcMain.handle('recording-rename', (_e, id: string, name: string) => recording.rename(id, name));
-
-/**
- * Bind a library item (recording or YouTube clip) to a pack/key. If the
- * target pack is bundled, we clone it into user storage but **preserve each
- * cloned entry's `source: 'bundled'` tag** — that way the bundled audio still
- * resolves from the bundle. Only the new entry we just bound points at the
- * user's recordings dir.
- */
-ipcMain.handle('pack-bind-sound', (_e, opts: {
-  packId: string; key: string; recordingId?: string; label?: string;
-}) => {
-  const { packId, key, recordingId, label } = opts;
-  if (!/^[a-z]$/.test(key)) return { ok: false, error: 'Invalid key' };
-
-  const recordings = recordingId ? recording.readAll() : [];
-  const rec        = recordingId ? recordings.find(r => r.id === recordingId) : null;
-  if (recordingId && !rec) return { ok: false, error: 'Recording not found' };
-
-  const userPacks = readUserPacks();
-  let target = userPacks.find(p => p.id === packId);
-
-  if (!target) {
-    const bundled = readBundledPacks().find(p => p.id === packId);
-    if (bundled) {
-      // Deep-copy entries with their original source tag intact.
-      const keys: Record<string, SoundEntry> = {};
-      for (const [k, e] of Object.entries(bundled.keys)) keys[k] = { ...e };
-      target = { id: bundled.id, name: bundled.name, description: bundled.description, keys, origin: 'user' };
-    } else {
-      target = { id: packId, name: packId, description: '', keys: {}, origin: 'user' };
-    }
-    userPacks.push(target);
-  }
-
-  if (rec) {
-    target.keys[key] = { label: label || rec.name, file: rec.file, source: 'recording' };
-  } else {
-    delete target.keys[key];
-  }
-  writeUserPacks(userPacks);
-  refreshBoardIfActivePackIs(packId);
-  return { ok: true };
-});
-
-ipcMain.handle('pack-unbind-key', (_e, packId: string, key: string) => {
-  if (!/^[a-z]$/.test(key)) return { ok: false, error: 'Invalid key' };
-
-  const userPacks = readUserPacks();
-  let target = userPacks.find(x => x.id === packId);
-
-  // Clone-on-write for bundled packs — mirrors pack-bind-sound so clearing a
-  // pad on Classics works the same as overwriting one (creates a user-side
-  // override of the bundled pack with the cleared entry removed).
-  if (!target) {
-    const bundled = readBundledPacks().find(p => p.id === packId);
-    if (!bundled) return { ok: false, error: 'Pack not found' };
-    const keys: Record<string, SoundEntry> = {};
-    for (const [k, e] of Object.entries(bundled.keys)) keys[k] = { ...e };
-    target = { id: bundled.id, name: bundled.name, description: bundled.description, keys, origin: 'user' };
-    userPacks.push(target);
-  }
-
-  if (!(key in target.keys)) return { ok: true, changed: false };
-
-  delete target.keys[key];
-  writeUserPacks(userPacks);
-  refreshBoardIfActivePackIs(packId);
-  return { ok: true, changed: true };
-});
-
-/** Returns merged packs with each entry's `url` resolved to a playable file://. */
-ipcMain.handle('get-packs', () => {
-  const packs = readPacks();
-  return packs.map(p => {
-    const keys: Record<string, SoundEntry & { url: string }> = {};
-    for (const [k, e] of Object.entries(p.keys)) {
-      keys[k] = { ...e, url: pathToFileURL(resolveEntryPath(e)).href };
-    }
-    return { id: p.id, name: p.name, description: p.description, origin: p.origin, keys };
-  });
-});
-
-// ── Pack export/import (.mbpack — zip-shadowed format) ──────────────────────
-//
-// .mbpack file structure:
-//   manifest.json           — { mbpackVersion, id, name, description, keys, exportedAt }
-//   sounds/<basename>.mp3   — each referenced audio file, flat
-//
-// Built and read with system zip/unzip. No JS dependencies.
-
-const MBPACK_VERSION = 1;
-
-interface PackManifest {
-  mbpackVersion: number;
-  id:            string;
-  name:          string;
-  description:   string;
-  keys:          Record<string, { label: string; file: string }>;
-  exportedAt?:   string;
-}
-
-ipcMain.handle('pack-export', async (_e, packId: string) => {
-  const pack = readPacks().find(p => p.id === packId);
-  if (!pack) return { ok: false, error: `Pack '${packId}' not found` };
-
-  const win = childWin && !childWin.isDestroyed() ? childWin : boardWin!;
-  const dlg = await dialog.showSaveDialog(win, {
-    title:       'Export Pack',
-    defaultPath: `${pack.id}.mbpack`,
-    filters:     [{ name: 'MeetingBoost Pack', extensions: ['mbpack'] }],
-  });
-  if (dlg.canceled || !dlg.filePath) return { ok: false, error: 'Cancelled' };
-
-  const stagingDir = path.join(app.getPath('temp'), `mb_export_${Date.now()}`);
-  const stagingSnd = path.join(stagingDir, 'sounds');
-  fs.mkdirSync(stagingSnd, { recursive: true });
-
-  try {
-    const exportedKeys: PackManifest['keys'] = {};
-
-    for (const [key, entry] of Object.entries(pack.keys)) {
-      const src = resolveEntryPath(entry);
-      if (!fs.existsSync(src)) continue;
-      const base = path.basename(src);
-      fs.copyFileSync(src, path.join(stagingSnd, base));
-      exportedKeys[key] = { label: entry.label, file: `sounds/${base}` };
-    }
-
-    const manifest: PackManifest = {
-      mbpackVersion: MBPACK_VERSION,
-      id:            pack.id,
-      name:          pack.name,
-      description:   pack.description,
-      keys:          exportedKeys,
-      exportedAt:    new Date().toISOString(),
-    };
-    fs.writeFileSync(
-      path.join(stagingDir, 'manifest.json'),
-      JSON.stringify(manifest, null, 2),
-    );
-
-    // Remove an existing target — `zip` would otherwise update in place
-    try { fs.unlinkSync(dlg.filePath); } catch {}
-    await spawnPromise('zip', ['-r', '-q', dlg.filePath, 'manifest.json', 'sounds'],
-      { cwd: stagingDir });
-
-    fs.rmSync(stagingDir, { recursive: true, force: true });
-    return { ok: true, file: dlg.filePath, soundCount: Object.keys(exportedKeys).length };
-  } catch (e) {
-    fs.rmSync(stagingDir, { recursive: true, force: true });
-    return { ok: false, error: (e as Error).message };
-  }
-});
-
-ipcMain.handle('pack-import', async () => {
-  const win = childWin && !childWin.isDestroyed() ? childWin : boardWin!;
-  const dlg = await dialog.showOpenDialog(win, {
-    title:      'Import Pack',
-    filters:    [{ name: 'MeetingBoost Pack', extensions: ['mbpack'] }],
-    properties: ['openFile'],
-  });
-  if (dlg.canceled || !dlg.filePaths?.[0]) return { ok: false, error: 'Cancelled' };
-
-  const archive    = dlg.filePaths[0];
-  const stagingDir = path.join(app.getPath('temp'), `mb_import_${Date.now()}`);
-  fs.mkdirSync(stagingDir, { recursive: true });
-
-  try {
-    await spawnPromise('unzip', ['-o', '-q', archive, '-d', stagingDir]);
-
-    const manifestPath = path.join(stagingDir, 'manifest.json');
-    if (!fs.existsSync(manifestPath)) {
-      throw new Error('Not a valid .mbpack — manifest.json missing');
-    }
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as PackManifest;
-    if (!manifest.id || !manifest.keys) {
-      throw new Error('Not a valid .mbpack — manifest is malformed');
-    }
-    if (manifest.mbpackVersion && manifest.mbpackVersion > MBPACK_VERSION) {
-      throw new Error(`Pack format v${manifest.mbpackVersion} is newer than this build (v${MBPACK_VERSION})`);
-    }
-
-    // Resolve a non-colliding pack id
-    const packs = readPacks();
-    let finalId = manifest.id;
-    let n = 1;
-    while (packs.some(p => p.id === finalId)) { n++; finalId = `${manifest.id}-${n}`; }
-
-    // Imported packs always become user-owned content under userData/sounds/.
-    const destDir = path.join(userSoundsDir(), finalId);
-    fs.mkdirSync(destDir, { recursive: true });
-
-    const newKeys: Record<string, SoundEntry> = {};
-    let copied = 0;
-    for (const [key, entry] of Object.entries(manifest.keys)) {
-      const src = path.join(stagingDir, entry.file);
-      if (!fs.existsSync(src)) continue;
-      const base = path.basename(entry.file);
-      fs.copyFileSync(src, path.join(destDir, base));
-      newKeys[key] = { label: entry.label, file: `${finalId}/${base}`, source: 'user' };
-      copied++;
-    }
-    if (copied === 0) throw new Error('No sound files were found in the pack');
-
-    const userPacks = readUserPacks();
-    userPacks.push({
-      id:          finalId,
-      name:        n > 1 ? `${manifest.name} (${n})` : manifest.name,
-      description: manifest.description || 'Imported pack',
-      keys:        newKeys,
-      origin:      'user',
-    });
-    writeUserPacks(userPacks);
-
-    fs.rmSync(stagingDir, { recursive: true, force: true });
-    return { ok: true, id: finalId, name: manifest.name, soundCount: copied };
-  } catch (e) {
-    fs.rmSync(stagingDir, { recursive: true, force: true });
-    return { ok: false, error: (e as Error).message };
-  }
-});
+ipcMain.handle('pack-create',     (_e, opts)                 => packs.create(opts));
+ipcMain.handle('pack-delete',     (_e, id: string)           => packs.remove(id));
+ipcMain.handle('pack-bind-sound', (_e, opts)                 => packs.bindSound(opts));
+ipcMain.handle('pack-unbind-key', (_e, id: string, k: string) => packs.unbindKey(id, k));
+ipcMain.handle('get-packs',       ()                         => packs.getAll());
+ipcMain.handle('pack-export',     (_e, id: string)           => packs.exportPack(id));
+ipcMain.handle('pack-import',     ()                         => packs.importPack());
 
 function buildAppMenu(): void {
   // Frameless windows still respect application-menu accelerators. Without a
