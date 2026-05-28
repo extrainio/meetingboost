@@ -10,14 +10,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/extrain-pascal/meetingboost/actions/workflows/ci.yml">
-    <img alt="CI status" src="https://img.shields.io/github/actions/workflow/status/extrain-pascal/meetingboost/ci.yml?branch=main&label=CI&logo=github&style=flat-square" />
+  <a href="https://github.com/extrainio/meetingboost/actions/workflows/ci.yml">
+    <img alt="CI status" src="https://img.shields.io/github/actions/workflow/status/extrainio/meetingboost/ci.yml?branch=main&label=CI&logo=github&style=flat-square" />
   </a>
-  <a href="https://github.com/extrain-pascal/meetingboost/actions/workflows/release-macos.yml">
-    <img alt="macOS build" src="https://img.shields.io/github/actions/workflow/status/extrain-pascal/meetingboost/release-macos.yml?label=macOS%20build&logo=apple&style=flat-square" />
+  <a href="https://github.com/extrainio/meetingboost/actions/workflows/release-macos.yml">
+    <img alt="macOS build" src="https://img.shields.io/github/actions/workflow/status/extrainio/meetingboost/release-macos.yml?label=macOS%20build&logo=apple&style=flat-square" />
   </a>
-  <a href="https://github.com/extrain-pascal/meetingboost/releases/latest">
-    <img alt="Latest release" src="https://img.shields.io/github/v/release/extrain-pascal/meetingboost?include_prereleases&label=release&style=flat-square" />
+  <a href="https://github.com/extrainio/meetingboost/releases/latest">
+    <img alt="Latest release" src="https://img.shields.io/github/v/release/extrainio/meetingboost?include_prereleases&label=release&style=flat-square" />
   </a>
   <a href="LICENSE">
     <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" />
@@ -136,7 +136,7 @@ If you just want to run it from source on macOS:
 brew install node@20 ffmpeg yt-dlp
 
 # 2. Clone and install
-git clone https://github.com/extrain-pascal/meetingboost.git meetingboost && cd meetingboost
+git clone https://github.com/extrainio/meetingboost.git meetingboost && cd meetingboost
 npm install
 
 # 3. Get the sound files (free, ~10 MB)
