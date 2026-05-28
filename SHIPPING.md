@@ -1,8 +1,9 @@
 # MeetingBoost — Shipping Checklist
 
-Status snapshot for getting from current state (v1.0.0-beta) to a publicly shippable
-v1.0.0. Items are grouped by blocking severity. Items already done are checked off
-so the diff is clear; everything unchecked is real work.
+Status snapshot for getting from current state (v1.0.0-rc1, code-complete) to a
+publicly shippable v1.0.0. Items are grouped by blocking severity. Items
+already done are checked off so the diff is clear; everything unchecked is
+real work.
 
 ---
 
@@ -32,6 +33,11 @@ so the diff is clear; everything unchecked is real work.
 - [x] **Local DMG build verified** — `release/MeetingBoost-1.0.0-beta-arm64.dmg` (99.6 MB, checksum valid). Tray template image, native key-listener helper, and DMG background all bundled correctly.
 - [x] **`mac.notarize: true`** in `package.json#build` — notarization runs when Apple notary credentials are set in CI; skipped otherwise (`SETUP.md`).
 - [x] **`scripts/verify-macos-bundle.sh`** + release-workflow verification: **layout-only** without `CSC_*`; **`codesign --verify --deep --strict`** plus optional **`spctl`** when Developer ID + notary credentials are configured in CI (`SETUP.md`).
+- [x] **`main.ts` tactical split** (ADR-0001): nine focused modules under `src/main/`, per-module Vitest suites (82 unit tests, <300 ms). `main.ts` ends at ~200 LOC of pure IPC + lifecycle wiring.
+- [x] **GitHub Releases update checker** — notify-only via tray menu + Settings → About. Background check on packaged builds (opt-out via `autoUpdate` setting). Full `electron-updater` autoupdater is still queued for post-v1; the notify-only path unblocks shipping rc1 without it.
+- [x] **`mbpack://` install links** — one-click pack sharing via custom URL scheme + confirmation dialog. `parseMbpackUrl` rejects non-https inner URLs.
+- [x] **Bundled BlackHole installer path** — `scripts/fetch-blackhole.sh` fetches the signed .pkg at build time; first-run walkthrough promotes the bundled installer when present.
+- [x] **CHANGELOG.md** introduced; semantic versioning declared.
 
 ---
 
@@ -53,7 +59,7 @@ so the diff is clear; everything unchecked is real work.
 
 ## 🟡 Nice to have for v1 (sand off rough edges)
 
-- [ ] Auto-update via `electron-updater` + GitHub Releases. The CI workflow already publishes releases on tag, so this is mostly: install pkg, add `autoUpdater.checkForUpdatesAndNotify()` in `main.ts`, configure `publish` in `package.json#build`.
+- [ ] Full auto-update via `electron-updater`. The notify-only checker added in rc1 covers "is there a newer version?" but downloading + replacing the bundle requires a signed build + `autoUpdater.checkForUpdatesAndNotify()` + `publish` config in `package.json#build`.
 - [ ] Crash reporter (`electron.crashReporter.start()`).
 - [ ] Telemetry kill-switch & privacy doc — even if you don't collect anything, say so.
 - [ ] Empty-state for the Custom pack when no sounds added yet.
