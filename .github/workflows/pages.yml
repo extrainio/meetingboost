@@ -1,0 +1,91 @@
+name: Deploy Landing to GitHub Pages
+
+# Builds and publishes the static landing page at `landing/` to GitHub Pages.
+# Assembles a `_site/` directory by combining `landing/index.html` with the
+# screenshots from `assets/screenshots/` (the HTML references them via
+# `../assets/screenshots/...` which works locally from the repo root but not
+# when only `landing/` is deployed standalone).
+#
+# One-time setup required in the GitHub UI:
+#   Settings → Pages → Build and deployment → Source: "GitHub Actions"
+#
+# Default URL once enabled: https://extrainio.github.io/meetingboost/
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'landing/**'
+      - 'assets/screenshots/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+# Standard for Pages deploys: write Pages artifact + mint OIDC token for the
+# deploy step. `contents: read` is enough — we don't write back to the repo.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one in-flight deploy at a time. Don't cancel the running one — a
+# half-deployed Pages site is worse than a stale one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Assemble _site/
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build _site/ from landing/ + assets/screenshots/
+        run: |
+          set -euo pipefail
+          mkdir -p _site/assets/screenshots
+          cp landing/index.html _site/index.html
+          cp -r assets/screenshots/. _site/assets/screenshots/
+
+          # Rewrite relative paths: the source HTML uses `../assets/...` because
+          # `landing/index.html` sits one level below the project root. In the
+          # deployed `_site/`, `index.html` is at the root so we drop the `../`.
+          sed -i.bak 's|\.\./assets/|assets/|g' _site/index.html
+          rm _site/index.html.bak
+
+      - name: Verify referenced assets exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Process substitution keeps the loop in the parent shell so a
+          # missing file actually fails the step (a while-read piped from
+          # grep would exit only the subshell).
+          while IFS= read -r ref; do
+            case "$ref" in
+              http*|//*|data:*|'') continue ;;
+            esac
+            if [ ! -f "_site/$ref" ]; then
+              echo "::error::Missing asset referenced from index.html: $ref"
+              exit 1
+            fi
+          done < <(grep -oE 'src="[^"]+"' _site/index.html | sed -e 's/^src="//' -e 's/"$//')
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
