@@ -416,20 +416,12 @@ export async function exportPack(
   }
 }
 
-export async function importPack(): Promise<{
+// Install a .mbpack archive without any UI. Used by both the file-picker flow
+// (`importPack`) and the mbpack:// protocol handler. Emits `packs-changed` on
+// success so renderers refresh.
+export async function installFromArchive(archive: string): Promise<{
   ok: boolean; error?: string; id?: string; name?: string; soundCount?: number
 }> {
-  const childWin = deps.getChildWin();
-  const boardWin = deps.getBoardWin();
-  const win = childWin && !childWin.isDestroyed() ? childWin : boardWin!;
-  const dlg = await dialog.showOpenDialog(win, {
-    title:      'Import Pack',
-    filters:    [{ name: 'MeetingBoost Pack', extensions: ['mbpack'] }],
-    properties: ['openFile'],
-  });
-  if (dlg.canceled || !dlg.filePaths?.[0]) return { ok: false, error: 'Cancelled' };
-
-  const archive    = dlg.filePaths[0];
   const stagingDir = path.join(app.getPath('temp'), `mb_import_${Date.now()}`);
   fs.mkdirSync(stagingDir, { recursive: true });
 
@@ -448,13 +440,11 @@ export async function importPack(): Promise<{
       throw new Error(`Pack format v${manifest.mbpackVersion} is newer than this build (v${MBPACK_VERSION})`);
     }
 
-    // Resolve a non-colliding pack id
     const packs = readAll();
     let finalId = manifest.id;
     let n = 1;
     while (packs.some(p => p.id === finalId)) { n++; finalId = `${manifest.id}-${n}`; }
 
-    // Imported packs always become user-owned content under userData/sounds/.
     const destDir = path.join(userSoundsDir(), finalId);
     fs.mkdirSync(destDir, { recursive: true });
 
@@ -481,9 +471,26 @@ export async function importPack(): Promise<{
     writeUser(userPacks);
 
     fs.rmSync(stagingDir, { recursive: true, force: true });
+    deps.getBoardWin()?.webContents.send('packs-changed');
+    deps.getChildWin()?.webContents.send('packs-changed');
     return { ok: true, id: finalId, name: manifest.name, soundCount: copied };
   } catch (e) {
     fs.rmSync(stagingDir, { recursive: true, force: true });
     return { ok: false, error: (e as Error).message };
   }
+}
+
+export async function importPack(): Promise<{
+  ok: boolean; error?: string; id?: string; name?: string; soundCount?: number
+}> {
+  const childWin = deps.getChildWin();
+  const boardWin = deps.getBoardWin();
+  const win = childWin && !childWin.isDestroyed() ? childWin : boardWin!;
+  const dlg = await dialog.showOpenDialog(win, {
+    title:      'Import Pack',
+    filters:    [{ name: 'MeetingBoost Pack', extensions: ['mbpack'] }],
+    properties: ['openFile'],
+  });
+  if (dlg.canceled || !dlg.filePaths?.[0]) return { ok: false, error: 'Cancelled' };
+  return installFromArchive(dlg.filePaths[0]);
 }

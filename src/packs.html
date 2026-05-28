@@ -644,6 +644,7 @@ body.drag-active .mini-key.empty { pointer-events: auto; opacity: 0.55; }
   <div class="spacer"></div>
   <button class="btn btn-ghost" onclick="importPack()" title="Import a .mbpack file">↓ Import</button>
   <button class="btn btn-ghost" id="exportBtn" onclick="exportPack()" title="Export selected pack as .mbpack">↑ Export</button>
+  <button class="btn btn-ghost" id="shareBtn" onclick="sharePack()" title="Generate a shareable mbpack:// install link">↗ Share</button>
   <button class="btn btn-primary" id="activateBtn" onclick="activateSelected()">Load Pack</button>
 </div>
 
@@ -1121,6 +1122,32 @@ async function exportPack() {
     return;
   }
   showToast(`Exported ${result.soundCount} sounds → ${result.file.split('/').pop()}`);
+}
+
+async function sharePack() {
+  if (!selected || selected.placeholder) {
+    showToast('Select a real pack to share');
+    return;
+  }
+  // Two-step: user uploads .mbpack somewhere public, pastes the URL, we
+  // wrap it in an mbpack:// install link. No backend required.
+  const hosted = prompt(
+    `Step 1: export "${selected.name}" and upload the .mbpack file to a public URL ` +
+    `(GitHub Release asset, Gist raw, S3, etc).\n\n` +
+    `Step 2: paste that public https:// URL here:`
+  );
+  if (!hosted) return;
+  if (!/^https:\/\//i.test(hosted.trim())) {
+    showToast('URL must start with https://');
+    return;
+  }
+  const link = `mbpack://import?url=${encodeURIComponent(hosted.trim())}`;
+  try {
+    await navigator.clipboard.writeText(link);
+    showToast('Share link copied — paste anywhere');
+  } catch {
+    prompt('Copy this share link:', link);
+  }
 }
 
 // ── New Pack flow ────────────────────────────────────────────────────────
