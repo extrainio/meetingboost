@@ -40,12 +40,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Build _site/ from landing/ + assets/screenshots/
+      - name: Build _site/ from landing/ + assets/
         run: |
           set -euo pipefail
           mkdir -p _site/assets/screenshots
           cp landing/index.html _site/index.html
           cp -r assets/screenshots/. _site/assets/screenshots/
+          cp assets/logo.svg _site/assets/logo.svg
 
           # Rewrite relative paths: the source HTML uses `../assets/...` because
           # `landing/index.html` sits one level below the project root. In the
@@ -59,16 +60,18 @@ jobs:
           set -euo pipefail
           # Process substitution keeps the loop in the parent shell so a
           # missing file actually fails the step (a while-read piped from
-          # grep would exit only the subshell).
+          # grep would exit only the subshell). Both src= and href= so a
+          # broken favicon/stylesheet fails the build instead of going to
+          # production silently.
           while IFS= read -r ref; do
             case "$ref" in
-              http*|//*|data:*|'') continue ;;
+              http*|//*|data:*|'#'*|'') continue ;;
             esac
             if [ ! -f "_site/$ref" ]; then
               echo "::error::Missing asset referenced from index.html: $ref"
               exit 1
             fi
-          done < <(grep -oE 'src="[^"]+"' _site/index.html | sed -e 's/^src="//' -e 's/"$//')
+          done < <(grep -oE '(src|href)="[^"]+"' _site/index.html | sed -E -e 's/^(src|href)="//' -e 's/"$//')
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
