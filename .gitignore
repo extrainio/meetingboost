@@ -7,6 +7,8 @@ main.js
 main.js.map
 preload.js
 preload.js.map
+src/main/*.js
+src/main/*.js.map
 *.tsbuildinfo
 
 # Electron-builder release artefacts
