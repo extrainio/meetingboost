@@ -61,10 +61,13 @@ ipcMain.handle('settings-export',  () => settings.exportToFile(windows.getChildW
 ipcMain.handle('settings-reset',   () => settings.reset());
 
 // audio
-ipcMain.handle('audio-detect-virtual-driver', () => audio.detectVirtualDriver(windows.getBoardWin()));
-ipcMain.handle('audio-mark-walkthrough-seen', () => audio.markWalkthroughSeen());
-ipcMain.handle('check-accessibility',         () => audio.checkAccessibility());
-ipcMain.handle('request-accessibility',       () => audio.requestAccessibility());
+ipcMain.handle('audio-detect-virtual-driver',   () => audio.detectVirtualDriver(windows.getBoardWin()));
+ipcMain.handle('audio-mark-walkthrough-seen',   () => audio.markWalkthroughSeen());
+ipcMain.handle('check-accessibility',           () => audio.checkAccessibility());
+ipcMain.handle('request-accessibility',         () => audio.requestAccessibility());
+ipcMain.handle('blackhole-installer-available', () => audio.isBundledInstallerAvailable());
+ipcMain.handle('install-blackhole',             () => audio.installBundled());
+ipcMain.handle('open-audio-midi-setup',         () => audio.openAudioMidiSetup());
 
 // recording
 ipcMain.handle('recording-save',   (_e, opts)                  => recording.save(opts));

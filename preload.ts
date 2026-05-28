@@ -104,6 +104,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('audio-detect-virtual-driver'),
   markBlackholeWalkthroughSeen: (): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke('audio-mark-walkthrough-seen'),
+  blackholeInstallerAvailable: (): Promise<{ available: boolean }> =>
+    ipcRenderer.invoke('blackhole-installer-available'),
+  installBlackhole: (): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke('install-blackhole'),
+  openAudioMidiSetup: (): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke('open-audio-midi-setup'),
 
   // ── Push events ──────────────────────────────────────────────────────────
   onPackSelected:  (cb: (e: unknown, packId: string) => void): void =>

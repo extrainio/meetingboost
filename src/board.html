@@ -991,15 +991,25 @@ input[type=range]::-webkit-slider-thumb:hover {
       document.getElementById('bhNum').textContent = 'Step 2 of 3';
       document.getElementById('bhH').textContent = 'Install BlackHole';
       document.getElementById('bhBody').innerHTML =
-        'Option A — Homebrew (recommended):' +
-        '<div class="bh-brew-row">' +
-          '<span class="bh-brew-cmd" id="bhBrewCmd">brew install blackhole-2ch</span>' +
-          '<button class="bh-copy-btn" id="bhCopyBtn" onclick="bhCopyBrew()">Copy</button>' +
+        '<div id="bhBundledRow" style="display:none">' +
+          '<button class="onboard-btn primary" style="width:100%" onclick="bhRunBundledInstaller()" id="bhBundledBtn">' +
+            'Install BlackHole (bundled)' +
+          '</button>' +
+          '<div class="bh-refresh-tip" style="margin-top:6px">' +
+            'Opens Apple\'s Installer. You\'ll be asked for your admin password.' +
+          '</div>' +
         '</div>' +
-        'Option B — installer package:<br>' +
-        '<a class="bh-ext-link" href="#" onclick="bhOpenExternal(); return false;">' +
-          'Download from existential.audio/blackhole →' +
-        '</a>' +
+        '<div id="bhFallbackRow">' +
+          'Option A — Homebrew:' +
+          '<div class="bh-brew-row">' +
+            '<span class="bh-brew-cmd" id="bhBrewCmd">brew install blackhole-2ch</span>' +
+            '<button class="bh-copy-btn" id="bhCopyBtn" onclick="bhCopyBrew()">Copy</button>' +
+          '</div>' +
+          'Option B — installer package:<br>' +
+          '<a class="bh-ext-link" href="#" onclick="bhOpenExternal(); return false;">' +
+            'Download from existential.audio/blackhole →' +
+          '</a>' +
+        '</div>' +
         '<div class="bh-refresh-row">' +
           '<button class="onboard-btn primary" style="width:100%" onclick="bhRefresh()">' +
             'I\'ve installed it — refresh devices →' +
@@ -1012,6 +1022,10 @@ input[type=range]::-webkit-slider-thumb:hover {
       document.getElementById('bhNext').style.display = 'none';
       document.getElementById('bhBack').style.display = '';
       document.getElementById('bhSkip').style.display = '';
+      // Probe whether the bundled installer is present (packaged build) and
+      // promote it as the primary path. In dev runs, the bundled row stays
+      // hidden and the brew/web fallbacks lead.
+      bhProbeBundledInstaller();
     },
 
     // Step 2 — Configure
@@ -1031,7 +1045,15 @@ input[type=range]::-webkit-slider-thumb:hover {
           '</div>' +
         '</div>' +
         'In MeetingBoost: <code>Settings → Audio → Virtual Output</code><br>' +
-        'In Zoom/Teams/Meet: set Microphone to <code>BlackHole 2ch</code>';
+        'In Zoom/Teams/Meet: set Microphone to <code>BlackHole 2ch</code>' +
+        '<div class="bh-refresh-row">' +
+          '<button class="onboard-btn" style="width:100%" onclick="bhOpenAudioMidi()">' +
+            'Open Audio MIDI Setup' +
+          '</button>' +
+          '<div class="bh-refresh-tip show" style="margin-top:6px">' +
+            'Optional: create a Multi-Output Device combining your speakers + BlackHole so you still hear sounds locally while they route to the meeting.' +
+          '</div>' +
+        '</div>';
       document.getElementById('bhNext').textContent = 'Done';
       document.getElementById('bhNext').style.display = '';
       document.getElementById('bhBack').style.display = '';
@@ -1106,6 +1128,47 @@ input[type=range]::-webkit-slider-thumb:hover {
   function bhOpenExternal() {
     const url = 'https://existential.audio/blackhole/';
     window.electronAPI?.openExternal?.(url);
+  }
+
+  async function bhProbeBundledInstaller() {
+    const r = await window.electronAPI?.blackholeInstallerAvailable?.();
+    if (r?.available) {
+      const b = document.getElementById('bhBundledRow');
+      const f = document.getElementById('bhFallbackRow');
+      if (b) b.style.display = '';
+      if (f) f.style.display = 'none';
+    }
+  }
+
+  async function bhRunBundledInstaller() {
+    const btn = document.getElementById('bhBundledBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Installer running…'; }
+    const r = await window.electronAPI?.installBlackhole?.();
+    if (btn) { btn.disabled = false; btn.textContent = 'Install BlackHole (bundled)'; }
+    if (!r?.ok) {
+      const tip = document.getElementById('bhRefreshTip');
+      if (tip) {
+        tip.textContent = `Installer failed: ${r?.error || 'unknown'}. Try the brew or web option below.`;
+        tip.classList.add('show');
+      }
+      return;
+    }
+    // Apple's Installer.app exited — re-detect and advance if BlackHole now shows.
+    const found = await reDetectVirtualDriver(true);
+    if (found) {
+      await window.electronAPI?.markBlackholeWalkthroughSeen?.();
+      showBlackholeWalkthrough(2);
+    } else {
+      const tip = document.getElementById('bhRefreshTip');
+      if (tip) {
+        tip.textContent = 'Install completed but driver not detected yet. macOS sometimes needs a logout/login. Try Refresh below.';
+        tip.classList.add('show');
+      }
+    }
+  }
+
+  function bhOpenAudioMidi() {
+    window.electronAPI?.openAudioMidiSetup?.();
   }
 
   function bhNext() {

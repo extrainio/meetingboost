@@ -23,6 +23,9 @@ assets/icon.icns
 assets/icon.png
 assets/icon.iconset/
 
+# Bundled third-party installers (fetched at build time by scripts/fetch-blackhole.sh)
+assets/installers/
+
 # macOS
 .DS_Store
 *.swp
