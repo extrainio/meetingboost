@@ -28,6 +28,14 @@
     "productName": "MeetingBoost",
     "copyright": "Copyright © 2026 MeetingBoost",
     "asar": true,
+    "protocols": [
+      {
+        "name": "MeetingBoost Pack",
+        "schemes": [
+          "mbpack"
+        ]
+      }
+    ],
     "asarUnpack": [
       "node_modules/ffmpeg-static/ffmpeg",
       "node_modules/ffmpeg-static/index.js",

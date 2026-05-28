@@ -7,6 +7,7 @@ import * as recording from './src/main/recording.js';
 import * as youtube from './src/main/youtube.js';
 import * as packs from './src/main/packs.js';
 import * as library from './src/main/library.js';
+import * as protocol from './src/main/protocol.js';
 import * as windows from './src/main/windows.js';
 
 // Wire main-process deps the settings module needs to dispatch side effects.
@@ -25,6 +26,31 @@ settings.configure({
 recording.configure({ getBoardWin: windows.getBoardWin, getChildWin: windows.getChildWin });
 packs.configure({     getBoardWin: windows.getBoardWin, getChildWin: windows.getChildWin });
 library.configure({   getBoardWin: windows.getBoardWin, getChildWin: windows.getChildWin });
+protocol.configure({  getBoardWin: windows.getBoardWin, getChildWin: windows.getChildWin });
+
+// Single-instance lock — required so a second launch (e.g. user clicks an
+// mbpack:// link while the app is already running on Windows/Linux) routes
+// the URL to the existing process instead of opening a duplicate.
+const gotInstanceLock = app.requestSingleInstanceLock();
+if (!gotInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (_e, argv) => {
+    const url = argv.find(a => a.startsWith('mbpack://'));
+    if (url) protocol.handleMbpackUrl(url);
+    const w = windows.getBoardWin();
+    if (w && !w.isDestroyed()) { w.show(); w.focus(); }
+  });
+}
+
+// macOS routes URL launches through `open-url` instead of argv. Can fire
+// before or after `whenReady`, so handleMbpackUrl queues and drains.
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  protocol.handleMbpackUrl(url);
+});
+
+app.setAsDefaultProtocolClient('mbpack');
 
 // ── IPC registration table — pure delegation ─────────────────────────────────
 //
@@ -143,6 +169,9 @@ app.whenReady().then(() => {
 
   // Restore persisted runtime state
   if (settings.get('globalCapture', false)) windows.startGlobalCapture();
+
+  // mbpack:// URL that arrived during cold-start, before app was ready.
+  protocol.drainPending();
 
   app.on('activate', () => {
     const w = windows.getBoardWin();
