@@ -13,7 +13,7 @@ import {
   userRecordingsDir, userRecordingsFile, customSoundsDir,
   ensureUserDirs, bundledPacksFile, bundledSoundsRoot,
 } from './src/main/paths.js';
-import { TOOL_PATHS, bundledFfmpeg, findBin, spawnPromise } from './src/main/tools.js';
+import { findBin, spawnPromise } from './src/main/tools.js';
 
 const isDev = process.env.ELECTRON_IS_DEV === '1';
 
