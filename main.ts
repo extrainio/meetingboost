@@ -10,12 +10,13 @@ import { GlobalKeyboardListener } from 'node-global-key-listener';
 
 import {
   userRoot, userPacksFile, userSoundsDir,
-  userRecordingsDir, userRecordingsFile, customSoundsDir,
+  userRecordingsDir, customSoundsDir,
   ensureUserDirs, bundledPacksFile, bundledSoundsRoot,
 } from './src/main/paths.js';
 import { findBin, spawnPromise } from './src/main/tools.js';
 import * as settings from './src/main/settings.js';
 import * as audio from './src/main/audio.js';
+import * as recording from './src/main/recording.js';
 
 const isDev = process.env.ELECTRON_IS_DEV === '1';
 
@@ -33,6 +34,17 @@ settings.configure({
   clamp01:            (n) => clamp01(n),
   startGlobalCapture: ()  => startGlobalCapture(),
   stopGlobalCapture:  ()  => stopGlobalCapture(),
+});
+
+// Recording module needs window refs (for `recordings-changed` events) and the
+// pack helpers (still in main.ts; moved out in Task 6). Same getter pattern so
+// the module always sees the current boardWin/childWin values.
+recording.configure({
+  getBoardWin: () => boardWin,
+  getChildWin: () => childWin,
+  readUserPacks,
+  writeUserPacks,
+  refreshBoardIfActivePackIs,
 });
 
 function createBoardWindow(): void {
@@ -707,7 +719,7 @@ ipcMain.handle('library-add-from-clip', async (_e, opts: {
     return { ok: false, error: (e as Error).message };
   }
 
-  const meta: RecordingMeta = {
+  const meta: recording.RecordingMeta = {
     id, name: name.trim() || 'Clip',
     file: baseName,
     createdAt: new Date().toISOString(),
@@ -715,9 +727,7 @@ ipcMain.handle('library-add-from-clip', async (_e, opts: {
     kind: 'youtube',
     sourceUrl,
   };
-  const list = readRecordings();
-  list.unshift(meta);
-  writeRecordings(list);
+  recording.add(meta);
 
   boardWin?.webContents.send('recordings-changed');
   childWin?.webContents.send('recordings-changed');
@@ -818,39 +828,11 @@ ipcMain.handle('library-create-pack-from-clips', async (_e, opts: CreatePackOpts
   };
 });
 
-// ── Voice recording: WebM/Opus blob from renderer → MP3 in inventory ────────
+// ── Voice recording / library inventory ────────────────────────────────────
 //
-// Recordings are saved into a flat inventory under userData/recordings without
-// a key binding. Users assign them to a pack/key later via drag-drop. Storing
-// metadata in recordings.json keeps file names slug-collision-safe and lets
-// us track display name + creation time.
-
-/**
- * Library inventory — anything the user has captured or downloaded that isn't
- * yet bound to a pack key. `kind` distinguishes mic recordings from YouTube
- * clips; the dir + json file are shared so the renderer sees one unified list.
- */
-interface RecordingMeta {
-  id:          string;
-  name:        string;
-  file:        string;       // basename inside userData/recordings/
-  createdAt:   string;
-  durationMs?: number;
-  kind?:       'mic' | 'youtube';
-  sourceUrl?:  string;       // original URL for youtube clips
-}
-
-function readRecordings(): RecordingMeta[] {
-  try {
-    const raw = JSON.parse(fs.readFileSync(userRecordingsFile(), 'utf8')) as RecordingMeta[];
-    // Old entries without kind default to 'mic' — the only kind that existed before.
-    return raw.map(r => ({ kind: 'mic', ...r }));
-  } catch { return []; }
-}
-function writeRecordings(list: RecordingMeta[]): void {
-  ensureUserDirs();
-  fs.writeFileSync(userRecordingsFile(), JSON.stringify(list, null, 2));
-}
+// CRUD for the recordings inventory now lives in src/main/recording.ts. The
+// IPC handlers are wired below; library-add-from-clip (YouTube → library)
+// still lives here pending Task 5 but goes through recording.add().
 
 // ── YouTube clip cache ─────────────────────────────────────────────────────
 //
@@ -873,65 +855,8 @@ function ytCacheKey(url: string, start: number, end: number): string {
   return Math.abs(h).toString(36);
 }
 
-interface RecordSaveOpts {
-  name:   string;
-  buffer: Uint8Array;   // WebM/Opus payload from MediaRecorder
-  durationMs?: number;
-}
-
-ipcMain.handle('recording-save', async (_e, opts: RecordSaveOpts) => {
-  const { name, buffer, durationMs } = opts;
-  if (!buffer || buffer.length === 0) {
-    return { ok: false, error: 'Empty recording — try again.' };
-  }
-
-  ensureUserDirs();
-  const id       = `rec_${Date.now()}`;
-  const safeName = slugify(name, 'recording');
-  const baseName = `${safeName}-${id}.mp3`;
-  const outFile  = path.join(userRecordingsDir(), baseName);
-  const tmpWebm  = path.join(app.getPath('temp'), `mb_rec_${Date.now()}.webm`);
-
-  try {
-    fs.writeFileSync(tmpWebm, Buffer.from(buffer));
-
-    const ffmpeg = findBin('ffmpeg');
-    await spawnPromise(ffmpeg, [
-      '-y', '-i', tmpWebm,
-      '-acodec', 'libmp3lame', '-q:a', '2',
-      outFile,
-    ]);
-
-    try { fs.unlinkSync(tmpWebm); } catch {}
-
-    const meta: RecordingMeta = {
-      id, name: name.trim() || 'Recording',
-      file: baseName,
-      createdAt: new Date().toISOString(),
-      durationMs,
-    };
-    const list = readRecordings();
-    list.unshift(meta);
-    writeRecordings(list);
-
-    boardWin?.webContents.send('recordings-changed');
-    childWin?.webContents.send('recordings-changed');
-
-    return { ok: true, recording: { ...meta, url: pathToFileURL(outFile).href } };
-  } catch (e) {
-    try { fs.unlinkSync(tmpWebm); } catch {}
-    return { ok: false, error: (e as Error).message };
-  }
-});
-
-ipcMain.handle('recording-list', () => {
-  const list = readRecordings();
-  return list.map(m => ({
-    ...m,
-    kind: m.kind ?? 'mic',
-    url:  pathToFileURL(path.join(userRecordingsDir(), m.file)).href,
-  }));
-});
+ipcMain.handle('recording-save', (_e, opts) => recording.save(opts));
+ipcMain.handle('recording-list', () => recording.list());
 
 /**
  * Create a brand-new empty user pack. Generates a unique id from the name if
@@ -986,46 +911,8 @@ ipcMain.handle('pack-delete', (_e, packId: string) => {
   return { ok: true };
 });
 
-ipcMain.handle('recording-delete', (_e, id: string) => {
-  const list = readRecordings();
-  const idx  = list.findIndex(r => r.id === id);
-  if (idx < 0) return { ok: false, error: 'Recording not found' };
-
-  // Detach from any user packs first so the board doesn't hold a dead path.
-  const packs   = readUserPacks();
-  const target  = list[idx].file;
-  let changed   = false;
-  for (const p of packs) {
-    for (const k of Object.keys(p.keys)) {
-      const e = p.keys[k];
-      if (e.source === 'recording' && e.file === target) {
-        delete p.keys[k];
-        changed = true;
-      }
-    }
-  }
-  if (changed) writeUserPacks(packs);
-
-  try { fs.unlinkSync(path.join(userRecordingsDir(), target)); } catch {}
-  list.splice(idx, 1);
-  writeRecordings(list);
-
-  boardWin?.webContents.send('recordings-changed');
-  childWin?.webContents.send('recordings-changed');
-  if (changed) refreshBoardIfActivePackIs(settings.get('activePack', 'classics'));
-  return { ok: true };
-});
-
-ipcMain.handle('recording-rename', (_e, id: string, name: string) => {
-  const list = readRecordings();
-  const r    = list.find(x => x.id === id);
-  if (!r) return { ok: false, error: 'Recording not found' };
-  r.name = name.trim() || r.name;
-  writeRecordings(list);
-  boardWin?.webContents.send('recordings-changed');
-  childWin?.webContents.send('recordings-changed');
-  return { ok: true };
-});
+ipcMain.handle('recording-delete', (_e, id: string) => recording.remove(id));
+ipcMain.handle('recording-rename', (_e, id: string, name: string) => recording.rename(id, name));
 
 /**
  * Bind a library item (recording or YouTube clip) to a pack/key. If the
@@ -1040,7 +927,7 @@ ipcMain.handle('pack-bind-sound', (_e, opts: {
   const { packId, key, recordingId, label } = opts;
   if (!/^[a-z]$/.test(key)) return { ok: false, error: 'Invalid key' };
 
-  const recordings = recordingId ? readRecordings() : [];
+  const recordings = recordingId ? recording.readAll() : [];
   const rec        = recordingId ? recordings.find(r => r.id === recordingId) : null;
   if (recordingId && !rec) return { ok: false, error: 'Recording not found' };
 
