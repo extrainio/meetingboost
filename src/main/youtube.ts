@@ -4,7 +4,10 @@ import * as path from 'path';
 import { pathToFileURL } from 'url';
 
 import { userRoot } from './paths.js';
-import { findBin, spawnPromise } from './tools.js';
+import {
+  findBin, spawnPromise,
+  findJsRuntime, ytDlpSupportsJsRuntimes, JsRuntime,
+} from './tools.js';
 
 // ── YouTube snippet / pack pipeline ────────────────────────────────────────
 //
@@ -132,6 +135,32 @@ export function cacheKey(url: string, start: number, end: number): string {
   return Math.abs(h).toString(36);
 }
 
+// ── yt-dlp arg builder (JS runtime injection) ─────────────────────────────
+//
+// Modern yt-dlp needs a JS runtime to extract YouTube. `jsRuntimeArgs` is
+// pure so the three branches (no runtime / unsupported flag / inject)
+// are testable without spawning yt-dlp.
+
+export function jsRuntimeArgs(runtime: JsRuntime | null, supported: boolean): string[] {
+  if (!runtime || !supported) return [];
+  return ['--js-runtimes', `${runtime.name}:${runtime.path}`];
+}
+
+async function ytdlpArgs(extra: string[]): Promise<string[]> {
+  const runtime   = findJsRuntime();
+  const supported = await ytDlpSupportsJsRuntimes();
+  return [...jsRuntimeArgs(runtime, supported), ...extra];
+}
+
+const JS_RUNTIME_WARNING_RE = /No supported JavaScript runtime could be found/i;
+
+function mapYtError(msg: string): string {
+  if (JS_RUNTIME_WARNING_RE.test(msg)) {
+    return 'YouTube extraction needs a JavaScript runtime. Install one with `brew install deno` (or node / bun) and try again.';
+  }
+  return msg;
+}
+
 // ── Source-download helper (shared by prepareClip / preparePack) ───────────
 
 /**
@@ -143,10 +172,10 @@ async function downloadSourceMp3(url: string): Promise<string> {
   const tmpPath = path.join(app.getPath('temp'), `mb_yt_${Date.now()}.%(ext)s`);
   const tmpMp3  = tmpPath.replace('%(ext)s', 'mp3');
   const ytdlp   = findBin('yt-dlp');
-  await spawnPromise(ytdlp, [
+  await spawnPromise(ytdlp, await ytdlpArgs([
     '-x', '--audio-format', 'mp3', '--audio-quality', '0',
     '--no-playlist', '-o', tmpPath, url,
-  ]);
+  ]));
   return tmpMp3;
 }
 
@@ -158,7 +187,8 @@ export async function getInfo(url: string): Promise<
 > {
   try {
     const ytdlp = findBin('yt-dlp');
-    const raw   = await spawnPromise(ytdlp, ['--dump-json', '--no-playlist', url], { capture: true });
+    const args  = await ytdlpArgs(['--dump-json', '--no-playlist', url]);
+    const raw   = await spawnPromise(ytdlp, args, { capture: true });
     const info  = JSON.parse(raw) as Record<string, unknown>;
     return {
       ok:        true,
@@ -169,7 +199,7 @@ export async function getInfo(url: string): Promise<
       videoId:   info.id        as string,
     };
   } catch (e) {
-    return { ok: false, error: (e as Error).message };
+    return { ok: false, error: mapYtError((e as Error).message) };
   }
 }
 
@@ -191,11 +221,11 @@ export async function detectSnippets(url: string): Promise<
     //   --no-playlist → ignores list=, returns single-video json
     //   --flat-playlist → playlist wrapper with thin entries[]
     const isPlaylist = /[?&]list=/.test(url);
-    const args = isPlaylist
+    const baseArgs = isPlaylist
       ? ['--dump-single-json', '--flat-playlist', url]
       : ['--dump-single-json', '--no-playlist',   url];
 
-    const raw = await spawnPromise(ytdlp, args, { capture: true });
+    const raw = await spawnPromise(ytdlp, await ytdlpArgs(baseArgs), { capture: true });
     const json = JSON.parse(raw) as Record<string, unknown>;
     const result = classifyDetectResult(json);
 
@@ -208,6 +238,7 @@ export async function detectSnippets(url: string): Promise<
                                                 friendly = 'Age-restricted video — yt-dlp cannot fetch it.';
     else if (/HTTP Error 429/.test(msg))        friendly = 'YouTube rate-limited — try again in a minute.';
     else if (/Video unavailable/i.test(msg))    friendly = 'Video unavailable.';
+    else                                        friendly = mapYtError(msg);
 
     return { ok: false, error: friendly };
   }
@@ -248,7 +279,7 @@ export async function prepareClip(opts: PrepareClipOpts): Promise<
   } catch (e) {
     if (tmpMp3) { try { fs.unlinkSync(tmpMp3); } catch {} }
     try { fs.unlinkSync(outFile); } catch {}
-    return { ok: false, error: (e as Error).message };
+    return { ok: false, error: mapYtError((e as Error).message) };
   }
 }
 
@@ -330,6 +361,6 @@ export async function preparePack(opts: PreparePackOpts): Promise<
     return { ok: true, prepared, failed };
   } catch (e) {
     if (tmpMp3) { try { fs.unlinkSync(tmpMp3); } catch {} }
-    return { ok: false, error: (e as Error).message, prepared, failed };
+    return { ok: false, error: mapYtError((e as Error).message), prepared, failed };
   }
 }
