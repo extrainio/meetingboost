@@ -34,6 +34,44 @@ export function findBin(name: string): string {
   return name; // fall back to PATH lookup
 }
 
+// ── yt-dlp JS runtime discovery ───────────────────────────────────────────
+//
+// yt-dlp ≥ 2026.02 needs a JavaScript runtime to extract YouTube videos
+// (see https://github.com/yt-dlp/yt-dlp/wiki/EJS). It auto-detects `deno`
+// on PATH only; for `node` and `bun` it requires `--js-runtimes NAME:PATH`.
+// Electron launched from Finder has a stripped PATH that often omits
+// /opt/homebrew/bin, so we explicitly resolve a runtime ourselves and pass
+// the absolute path.
+
+const JS_RUNTIME_NAMES = ['deno', 'node', 'bun'] as const;
+export type JsRuntimeName = (typeof JS_RUNTIME_NAMES)[number];
+export interface JsRuntime { name: JsRuntimeName; path: string; }
+
+export function findJsRuntime(): JsRuntime | null {
+  for (const name of JS_RUNTIME_NAMES) {
+    for (const dir of TOOL_PATHS) {
+      const full = path.join(dir, name);
+      if (fs.existsSync(full)) return { name, path: full };
+    }
+  }
+  return null;
+}
+
+let ytDlpSupportsJsRuntimesCache: boolean | null = null;
+
+// Older yt-dlp builds reject `--js-runtimes` as an unknown option, so we
+// feature-detect once per process via `--help` before passing the flag.
+export async function ytDlpSupportsJsRuntimes(): Promise<boolean> {
+  if (ytDlpSupportsJsRuntimesCache !== null) return ytDlpSupportsJsRuntimesCache;
+  try {
+    const help = await spawnPromise(findBin('yt-dlp'), ['--help'], { capture: true });
+    ytDlpSupportsJsRuntimesCache = /--js-runtimes/.test(help);
+  } catch {
+    ytDlpSupportsJsRuntimesCache = false;
+  }
+  return ytDlpSupportsJsRuntimesCache;
+}
+
 export function spawnPromise(
   bin: string, args: string[],
   opts: { capture?: boolean; cwd?: string } = {}

@@ -4,7 +4,7 @@ import * as path from 'path';
 
 import {
   filterSnippets, mapSnippetsToKeys, classifyDetectResult,
-  cacheKey,
+  cacheKey, jsRuntimeArgs,
   MIN_SNIPPET_SEC, MAX_SNIPPET_SEC_AUTOCHECK, MAX_KEYS, KEY_ORDER,
 } from '../../src/main/youtube';
 
@@ -21,7 +21,7 @@ describe('youtube module', () => {
     const m = await import('../../src/main/youtube');
     for (const fn of [
       'filterSnippets', 'mapSnippetsToKeys', 'classifyDetectResult',
-      'cacheDir', 'cacheKey',
+      'cacheDir', 'cacheKey', 'jsRuntimeArgs',
       'getInfo', 'detectSnippets', 'prepareClip', 'preparePack',
     ]) {
       expect(typeof m[fn as keyof typeof m]).toBe('function');
@@ -196,6 +196,22 @@ describe('classifyDetectResult', () => {
     expect(result.meta.title).toBe('');
     expect(result.meta.thumbnail).toBe('');
     expect(result.meta.duration).toBeUndefined();
+  });
+});
+
+describe('jsRuntimeArgs', () => {
+  it('returns no prefix when no runtime was found', () => {
+    expect(jsRuntimeArgs(null, true)).toEqual([]);
+  });
+
+  it('returns no prefix when yt-dlp does not support the flag (old yt-dlp safety)', () => {
+    expect(jsRuntimeArgs({ name: 'node', path: '/opt/homebrew/bin/node' }, false))
+      .toEqual([]);
+  });
+
+  it('emits --js-runtimes NAME:PATH when both runtime and flag support are present', () => {
+    expect(jsRuntimeArgs({ name: 'deno', path: '/opt/homebrew/bin/deno' }, true))
+      .toEqual(['--js-runtimes', 'deno:/opt/homebrew/bin/deno']);
   });
 });
 
