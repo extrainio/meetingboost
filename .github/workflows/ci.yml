@@ -67,6 +67,10 @@ jobs:
     # (`app.close()` hangs in CI on the very last test). 13/14 specs pass
     # consistently. Flip this to false once the teardown hang is fixed.
     continue-on-error: true
+    # Caps the blast radius of that afterAll hang — without this, a hung run
+    # burns up to GitHub's 6h default job timeout on a macOS runner (10x the
+    # per-minute billing of a Linux runner). Normal runs finish in ~1 min.
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v5
